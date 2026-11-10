@@ -8,6 +8,7 @@ import base64
 import hashlib
 import io
 import json
+import platform
 import shutil
 import subprocess
 import sys
@@ -54,6 +55,53 @@ def ok(msg):
 
 def bad(msg):
     print(f"  --  {msg}")
+
+
+# ---------------------------------------------------------------- this computer
+
+def ram_gb():
+    try:
+        if E.IS_MAC:
+            return int(subprocess.run(["sysctl", "-n", "hw.memsize"], capture_output=True, text=True).stdout) / 2**30
+        if E.IS_WIN:
+            import ctypes
+
+            class MEM(ctypes.Structure):
+                _fields_ = [("dwLength", ctypes.c_ulong), ("dwMemoryLoad", ctypes.c_ulong),
+                            ("ullTotalPhys", ctypes.c_ulonglong), ("ullAvailPhys", ctypes.c_ulonglong),
+                            ("ullTotalPageFile", ctypes.c_ulonglong), ("ullAvailPageFile", ctypes.c_ulonglong),
+                            ("ullTotalVirtual", ctypes.c_ulonglong), ("ullAvailVirtual", ctypes.c_ulonglong),
+                            ("sullAvailExtendedVirtual", ctypes.c_ulonglong)]
+            m = MEM()
+            m.dwLength = ctypes.sizeof(MEM)
+            ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(m))
+            return m.ullTotalPhys / 2**30
+        with open("/proc/meminfo") as f:
+            return int(f.readline().split()[1]) / 2**20
+    except Exception:
+        return None
+
+
+def machine_problem():
+    """A reason this computer cannot run the skill, or None. Checked before downloading anything."""
+    if E.IS_MAC:
+        arm = subprocess.run(["sysctl", "-n", "hw.optional.arm64"], capture_output=True, text=True).stdout.strip()
+        if arm != "1":
+            return ("this Mac has an Intel processor. edit-reel needs a Mac with Apple Silicon (M1 or newer): "
+                    "the speech and face models it uses (PyTorch, MediaPipe) no longer publish Intel Mac versions. "
+                    "Nothing was installed.")
+    return None
+
+
+def machine_notes():
+    notes = []
+    gb = ram_gb()
+    if gb is not None and gb < 7.5:
+        notes.append(f"only {gb:.0f} GB of RAM: transcription may be very slow or run out of memory (8 GB minimum, "
+                     "16 GB recommended). Close other apps while it runs.")
+    if E.IS_WIN and platform.machine().upper() in ("ARM64", "AARCH64"):
+        notes.append("Windows on ARM is not tested; it may fail to install the speech models.")
+    return notes, gb
 
 
 # ---------------------------------------------------------------- system programs
@@ -238,6 +286,12 @@ def ensure_voice_model():
 # ---------------------------------------------------------------- entry points
 
 def setup(modules, yes=False, languages=("en",), model=None, ffmpeg_skill_from=None):
+    problem = machine_problem()
+    if problem:
+        sys.exit(f"error: {problem}")
+    notes, gb = machine_notes()
+    for n in notes:
+        print(f"  !!  {n}")
     E.HOME.mkdir(parents=True, exist_ok=True)
     free = shutil.disk_usage(E.HOME).free / 1e9
     need = sum(MODULES[m]["size_gb"] for m in modules)
@@ -264,6 +318,14 @@ def setup(modules, yes=False, languages=("en",), model=None, ffmpeg_skill_from=N
 def doctor():
     """Report what is installed. Exit 0 when the core module is ready."""
     print(f"Home: {E.HOME}")
+    problem = machine_problem()
+    if problem:
+        bad(problem)
+        return 1
+    notes, gb = machine_notes()
+    ok(f"{platform.system()} {platform.machine()}" + (f", {gb:.0f} GB RAM" if gb else ""))
+    for n in notes:
+        print(f"  !!  {n}")
     found, libass, ver = ffmpeg_state()
     (ok if found else bad)(ver or "FFmpeg not found")
     if found:

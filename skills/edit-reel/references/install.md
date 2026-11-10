@@ -34,8 +34,9 @@ Python environments are created by uv with Python 3.11, so the system Python doe
 - **"FFmpeg was installed but is not visible yet"** (Windows): open a new terminal and run setup again.
 - **Exit code 3 from setup**: it is asking permission to install FFmpeg/uv. Run the printed commands or rerun
   with `--yes`.
-- **Slow transcription**: it runs on the CPU. A 60 s clip takes about 1–2 minutes on a recent laptop.
-  `--model small` is faster and less accurate.
+- **Transcription speed**: it runs on the CPU, using every core. On a 10-core Apple M4 a minute of footage takes
+  about 12 s (a 3-minute take, 39 s); machines with fewer cores take proportionally longer. `--model small` is
+  faster and less accurate.
 - **ffmpeg-skill download blocked**: `reel.py setup --ffmpeg-skill-from <file.tgz or folder>` installs it from a
   local copy (for example a backup fork).
 - **Model downloads fail behind a proxy**: set `HTTPS_PROXY`; models come from huggingface.co and pytorch.org.

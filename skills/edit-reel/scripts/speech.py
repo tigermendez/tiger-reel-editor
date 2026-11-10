@@ -2,7 +2,8 @@
 
   transcribe <media> <out-prefix> [--language es] [--names "Claude, Ana"] [--model large-v3-turbo]
       Whisper (faster-whisper) writes the words; WhisperX (wav2vec2) then measures where each one sounds.
-      Leaves <out>.txt, <out>.srt (one cue per phrase) and <out>.words.json ([{"w", "start", "end"}]).
+      Leaves <out>.txt, <out>.srt (one cue per phrase), <out>.words.json ([{"w", "start", "end"}]) and
+      <out>.listen.json: the moments Whisper was unsure about, for the person to listen to.
   align <media> <phrases.srt> <out.words.json> [--language es]
       After fixing a word or a name in the .srt, puts every word back where it is actually said.
 
@@ -98,25 +99,60 @@ def hallucination(seg):
     return bool(HALLUCINATIONS.match(text)) and (long_for_its_words or seg.no_speech_prob > 0.3)
 
 
+def moments_to_listen(heard, threshold):
+    """Words Whisper heard with low confidence, grouped into moments with their neighbours as context.
+
+    Low confidence is where stumbles, half-said words, mumbles, mispronunciations and unknown names show up. It is
+    a pointer for the person's ears, not a verdict: Whisper cannot judge tone or delivery."""
+    out = []
+    for i, (st, en, w, p) in enumerate(heard):
+        if p >= threshold:
+            continue
+        if out and st - out[-1]["end"] < 1.0:
+            out[-1]["end"] = round(en, 2)
+            out[-1]["words"].append(w)
+            out[-1]["last"] = i
+            continue
+        out.append({"start": round(st, 2), "end": round(en, 2), "words": [w], "first": i, "last": i})
+    for m in out:
+        a, b = max(0, m.pop("first") - 3), min(len(heard), m.pop("last") + 4)
+        flagged = set(m["words"])
+        m["context"] = " ".join(f"[{h[2]}]" if h[2] in flagged and h[3] < threshold else h[2] for h in heard[a:b])
+        m["words"] = " ".join(m["words"])
+    return out
+
+
 def cmd_transcribe(a):
     from faster_whisper import WhisperModel
     with tempfile.TemporaryDirectory() as tmp:
         wav = to_wav(a.media, tmp)
         model = WhisperModel(a.model, device="cpu", compute_type="int8", cpu_threads=os.cpu_count() or 4)
         segs, info = model.transcribe(wav, language=a.language, initial_prompt=a.names or None, beam_size=5,
-                                      condition_on_previous_text=False, vad_filter=a.vad)
-        segments, dropped = [], []
+                                      condition_on_previous_text=False, vad_filter=a.vad, word_timestamps=True)
+        segments, dropped, heard = [], [], []
         for s in segs:
             if not s.text.strip():
                 continue
-            (dropped if hallucination(s) else segments).append({"start": s.start, "end": s.end, "text": s.text.strip()})
+            bad = hallucination(s)
+            (dropped if bad else segments).append({"start": s.start, "end": s.end, "text": s.text.strip()})
+            if not bad:
+                heard += [(w.start, w.end, w.word.strip(), w.probability) for w in (s.words or []) if w.word.strip()]
         language = a.language or info.language
         with open(a.out + ".txt", "w", encoding="utf-8") as f:
             f.write("\n".join(s["text"] for s in segments) + "\n")
         write_srt(segments, a.out + ".srt")
         words = align(wav, segments, language) if segments else []
     save_words(words, a.out + ".words.json")
+    listen = moments_to_listen(heard, a.listen)
+    with open(a.out + ".listen.json", "w", encoding="utf-8") as f:
+        json.dump(listen, f, ensure_ascii=False, indent=1)
     print(f"language: {language}  phrases: {len(segments)}  words: {len(words)}")
+    if listen:
+        print(f"listen to these {len(listen)} moments (Whisper was unsure: a stumble, a cut word, a mumble, a name):")
+        for m in listen:
+            print(f"  {m['start']:7.2f}-{m['end']:6.2f} s  {m['context']}")
+    else:
+        print("Whisper was sure of every word (still listen to the takes you keep).")
     for x in dropped:
         print(f"dropped as a likely Whisper hallucination ({x['start']:.1f}-{x['end']:.1f} s): {x['text']!r}"
               " (if it was really said, add it back to the .srt and run align)")
@@ -143,6 +179,7 @@ def main():
     t.add_argument("--names", default="", help="proper nouns said in the video, so Whisper spells them right")
     t.add_argument("--model", default=os.environ.get("TIGER_REEL_EDITOR_WHISPER_MODEL", "large-v3-turbo"))
     t.add_argument("--vad", action="store_true", help="skip long non-speech parts (faster; may drop short words)")
+    t.add_argument("--listen", type=float, default=0.6, help="flag words heard with less confidence than this (0.6)")
     al = sub.add_parser("align")
     al.add_argument("media")
     al.add_argument("srt")

@@ -47,8 +47,9 @@ Homebrew or winget: show the printed commands, get a yes, and rerun with `--yes`
   `"transition": {"type": "none"}`: render's default is a 0.5 s fade, and talking reels use hard cuts.
   Send render's long log to a file and read only the result.
 - **Choosing takes:** keep the last clean take of each line, but you cannot hear: Whisper writes what it expected,
-  not a stumble or a flat delivery. List the lines where takes differ or the transcript looks odd, and ask the
-  person to listen to those before you build.
+  not a stumble or a flat delivery. `transcribe` prints (and saves in `<out>.listen.json`) the moments Whisper was
+  unsure about — stumbles, cut words, mumbles, names. Show that list, plus the lines where takes differ, and ask
+  the person to listen to those before you build. Tone and energy are always theirs to judge.
 - **Framing:** look at a frame before cutting. Phone footage is often wider than a reel wants (legs, empty wall);
   punch in to chest-up: render at 1.5x width (`"width": 1620`) and `ff crop` a 1080x1920 window around the face
   (`reel.py face --json` gives its position) — sharper than upscaling a 1080 export.
