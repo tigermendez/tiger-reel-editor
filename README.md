@@ -2,7 +2,7 @@
 
 **Edit Reels, TikToks and Shorts with Claude Code — with you as the director.**
 
-A skill for [Claude Code](https://claude.com/claude-code) that turns Claude into a careful editing assistant for
+A skill for [Claude Code](https://claude.com/claude-code) (and Codex) that turns your AI into a careful editing assistant for
 short vertical videos. You bring the footage and the taste. Claude helps you find the story, cuts, puts captions
 exactly on every word, warns you when a text covers your face, and checks the export before you post it.
 Everything runs on your computer, for free, on **macOS and Windows**.
@@ -41,7 +41,8 @@ fixed version and hash-checked. This skill adds the editor's judgement on top.
 
 ## Requirements
 
-- **Claude Code** with a paid Claude plan (Pro or Max).
+- **Claude Code** with a paid Claude plan (Pro or Max) — or **Codex** with a ChatGPT plan (it reads the same skill;
+  tested: it found the skill on its own, added a zoom and a progress bar and passed the review).
 - **macOS** on Apple Silicon (M1 or newer) or **Windows 10/11** (x64).
 - **~10 GB free disk** and **8 GB RAM** (16 GB recommended).
 - **Internet the first time.** After that everything works offline.
