@@ -22,6 +22,8 @@ REEL = ROOT / "skills" / "edit-reel" / "scripts" / "reel.py"
 sys.path.insert(0, str(REEL.parent))
 import _env as E  # noqa: E402
 
+os.environ.update(E.env())  # Windows resolves programs with this process's PATH, not the env= of the child
+
 # Windows consoles default to a legacy code page that cannot print "→", "≤" or accents: always write UTF-8.
 for _s in (sys.stdout, sys.stderr):
     try:
@@ -49,18 +51,33 @@ def reel(*args, ok=(0,)):
     return sh(sys.executable, REEL, *args, ok=ok)
 
 
+def seconds(path):
+    r = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(path)],
+                       capture_output=True, text=True)
+    try:
+        return float(r.stdout.strip())
+    except ValueError:
+        return 0.0
+
+
 def tts(text, out):
-    if E.IS_MAC:
-        sh("say", "-o", out.with_suffix(".aiff"), text)
-        sh("ffmpeg", "-nostdin", "-v", "error", "-y", "-i", out.with_suffix(".aiff"), "-ar", "48000", "-ac", "1", out)
-    elif E.IS_WIN:
+    """Speech from the OS's own voice; CI machines may have none, so fall back to espeak-ng."""
+    if E.IS_MAC and shutil.which("say"):
+        sh("say", "-o", out.with_suffix(".aiff"), text, ok=(0, 1))
+        if seconds(out.with_suffix(".aiff")) > 0.5:
+            sh("ffmpeg", "-nostdin", "-v", "error", "-y", "-i", out.with_suffix(".aiff"), "-ar", "48000", "-ac", "1", out)
+            return
+    if E.IS_WIN:
         ps = ("Add-Type -AssemblyName System.Speech; $s = New-Object System.Speech.Synthesis.SpeechSynthesizer; "
               f"$s.Rate = -1; $s.SetOutputToWaveFile('{out}'); $s.Speak('{text}'); $s.Dispose()")
-        sh("powershell", "-NoProfile", "-Command", ps)
-    elif shutil.which("espeak-ng"):
-        sh("espeak-ng", "-w", out, text)
-    else:
-        raise SystemExit("no text-to-speech engine on this OS")
+        sh("powershell", "-NoProfile", "-Command", ps, ok=(0, 1))
+        if seconds(out) > 0.5:
+            return
+    if shutil.which("espeak-ng"):
+        sh("espeak-ng", "-s", "150", "-w", out, text)
+        if seconds(out) > 0.5:
+            return
+    raise SystemExit("no working text-to-speech on this machine (install espeak-ng)")
 
 
 def check(cond, msg):

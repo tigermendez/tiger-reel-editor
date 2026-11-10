@@ -5,6 +5,7 @@
   python tests/e2e_graphics.py [--keep DIR]
 """
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -15,6 +16,8 @@ ROOT = Path(__file__).resolve().parent.parent
 REEL = ROOT / "skills" / "edit-reel" / "scripts" / "reel.py"
 sys.path.insert(0, str(REEL.parent))
 import _env as E  # noqa: E402
+
+os.environ.update(E.env())  # Windows resolves programs with this process's PATH, not the env= of the child
 
 # Windows consoles default to a legacy code page that cannot print "→", "≤" or accents: always write UTF-8.
 for _s in (sys.stdout, sys.stderr):

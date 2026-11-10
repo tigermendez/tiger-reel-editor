@@ -56,6 +56,10 @@ jobs:
       - name: Doctor
         run: python skills/edit-reel/scripts/reel.py doctor
 
+      - name: A voice for the test clip (macOS runners have no system voices)
+        if: runner.os == 'macOS'
+        run: brew install espeak-ng
+
       - name: End to end
         run: python tests/e2e.py --keep ${{ runner.temp }}/e2e
 
