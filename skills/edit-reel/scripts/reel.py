@@ -302,15 +302,20 @@ def cmd_level(rest):
     i, tp = _loudness(src)
     print(f"before: {i:.1f} LUFS, peak {tp:.1f} dBTP")
     room = a.tp - a.target  # how far above the average the peaks may sit
-    if tp - i > room:
+    temps = []
+    for n in range(1, 4):  # a limiter also lowers the average a little: measure again and repeat if needed
+        if tp - i <= room:
+            break
         ceiling = max(-24.0, round(i + room - 1.0, 1))
-        shaved = out.with_name(out.stem + ".shaved" + out.suffix)
-        print(f"peaks {tp - i:.1f} dB above the average (max {room:.1f}): compressor + limiter at {ceiling} dBFS")
+        shaved = out.with_name(f"{out.stem}.shaved{n}{out.suffix}")
+        print(f"pass {n}: peaks {tp - i:.1f} dB above the average (max {room:.1f}) → compressor + limiter at {ceiling} dBFS")
         _ff("audio", src, "--compress", "--limit", "--limit-ceiling", ceiling, "-o", shaved)
+        temps.append(shaved)
         src = shaved
+        i, tp = _loudness(src)
     _ff("loudness", src, "-I", a.target, "--tp", a.tp, "-o", out)
-    if src != Path(a.video):
-        src.unlink(missing_ok=True)
+    for t in temps:
+        t.unlink(missing_ok=True)
     i2, tp2 = _loudness(out)
     good = abs(i2 - a.target) <= 1 and tp2 <= -1
     print(f"after:  {i2:.1f} LUFS, peak {tp2:.1f} dBTP → {out}" + ("" if good else "  (still off: check the mix)"))
