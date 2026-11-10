@@ -23,6 +23,12 @@ import numpy as np
 import mediapipe as mp
 from mediapipe.tasks import python as mpt
 from mediapipe.tasks.python import vision
+# -I ignores PYTHONUTF8, and Windows consoles cannot print "→" or accents in their legacy code page.
+for _s in (sys.stdout, sys.stderr):
+    try:
+        _s.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError):
+        pass
 
 CHIN = 0.15   # BlazeFace's box ends at the lower lip: stretch it 15 % to reach the chin
 MARGIN = 40   # air between the chin and a caption

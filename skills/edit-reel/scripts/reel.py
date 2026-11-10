@@ -29,6 +29,13 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _env as E  # noqa: E402
 
+# Windows consoles default to a legacy code page that cannot print "→", "≤" or accents: always write UTF-8.
+for _s in (sys.stdout, sys.stderr):
+    try:
+        _s.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError):
+        pass
+
 os.environ.update(E.env())  # FFmpeg from ffmpeg-full / winget is visible to everything below
 
 

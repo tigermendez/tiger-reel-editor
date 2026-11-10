@@ -20,6 +20,13 @@ import sys
 from fractions import Fraction
 from pathlib import Path
 
+# Windows consoles default to a legacy code page that cannot print "→", "≤" or accents: always write UTF-8.
+for _s in (sys.stdout, sys.stderr):
+    try:
+        _s.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError):
+        pass
+
 MAX_SECONDS = {"reels": 90, "tiktok": 600, "shorts": 180}
 
 

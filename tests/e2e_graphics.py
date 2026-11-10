@@ -16,6 +16,13 @@ REEL = ROOT / "skills" / "edit-reel" / "scripts" / "reel.py"
 sys.path.insert(0, str(REEL.parent))
 import _env as E  # noqa: E402
 
+# Windows consoles default to a legacy code page that cannot print "→", "≤" or accents: always write UTF-8.
+for _s in (sys.stdout, sys.stderr):
+    try:
+        _s.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError):
+        pass
+
 PAGE = """<!doctype html>
 <html><head><meta charset="UTF-8" />
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>

@@ -22,6 +22,13 @@ REEL = ROOT / "skills" / "edit-reel" / "scripts" / "reel.py"
 sys.path.insert(0, str(REEL.parent))
 import _env as E  # noqa: E402
 
+# Windows consoles default to a legacy code page that cannot print "→", "≤" or accents: always write UTF-8.
+for _s in (sys.stdout, sys.stderr):
+    try:
+        _s.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError):
+        pass
+
 LINE_A = "Hello, this is a test of the reel editor."
 LINE_B = "Captions follow every single word you say."
 PAUSE = 1.5

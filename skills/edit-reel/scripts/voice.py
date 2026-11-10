@@ -7,10 +7,17 @@ The result is a 48 kHz mono WAV; put it back on the video with ffmpeg-skill's `a
 """
 import argparse
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
 from df.enhance import enhance, init_df, load_audio, save_audio
+# -I ignores PYTHONUTF8, and Windows consoles cannot print "→" or accents in their legacy code page.
+for _s in (sys.stdout, sys.stderr):
+    try:
+        _s.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError):
+        pass
 
 
 def main():

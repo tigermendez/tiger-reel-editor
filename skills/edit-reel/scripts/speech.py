@@ -18,6 +18,12 @@ import subprocess
 import sys
 import tempfile
 import warnings
+# -I ignores PYTHONUTF8, and Windows consoles cannot print "→" or accents in their legacy code page.
+for _s in (sys.stdout, sys.stderr):
+    try:
+        _s.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError):
+        pass
 
 warnings.filterwarnings("ignore")
 
