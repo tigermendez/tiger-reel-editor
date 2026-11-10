@@ -147,7 +147,8 @@ def main():
     check("PlayResX: 1080" in ass and "\\pos(540,1200)" in ass, "styled captions on the 1080x1920 canvas")
     reel("ff", "caption", d / "raw.mp4", "--ass", d / "captions.ass", "-o", d / "captioned.mp4", "--overwrite")
     reel("ff", "export", d / "captioned.mp4", "--preset", "reels", "-o", d / "exported.mp4", "--overwrite")
-    reel("ff", "loudness", d / "exported.mp4", "-I", "-14", "--tp", "-1", "-o", d / "reel_v1.mp4", "--overwrite")
+    reel("ff", "audio", d / "exported.mp4", "--compress", "-o", d / "compressed.mp4", "--overwrite")
+    reel("ff", "loudness", d / "compressed.mp4", "-I", "-14", "--tp", "-1", "-o", d / "reel_v1.mp4", "--overwrite")
 
     # 6. Face check runs (no face in a synthetic clip) and the final review passes.
     r = reel("face", d / "reel_v1.mp4", "--texts", d / "captions.ass")
