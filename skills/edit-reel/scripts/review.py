@@ -27,7 +27,7 @@ for _s in (sys.stdout, sys.stderr):
     except (AttributeError, ValueError):
         pass
 
-MAX_SECONDS = {"reels": 90, "tiktok": 600, "shorts": 180}
+MAX_SECONDS = {"reels": 180, "tiktok": 600, "shorts": 180}  # Instagram allows 3-minute Reels since 2025
 
 
 def run(cmd):

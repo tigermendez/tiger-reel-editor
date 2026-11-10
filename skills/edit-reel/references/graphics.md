@@ -17,7 +17,10 @@ Remotion is a fine alternative if the person already uses React; the checks belo
    from a small script (`out/graphics.py`) that reads the words, so a changed take re-times everything.
    Mark every element that must not collide with `data-check="name"`.
 4. **Check before rendering:** `reel.py overlaps graphics --face face.json` — exit 1 lists what overlaps what, and
-   what covers the face, with the seconds. Fix the layout, not the check. Then `reel.py hf lint graphics`.
+   what covers the face, with the seconds. Fix the layout, not the check. Then
+   `reel.py hf check graphics --at <the second each element is on screen>`: it also finds text that spills out
+   of its box (`text_box_overflow`). Inline text with `<b>` inside a flex card must be wrapped in one `<span>`,
+   or each piece becomes its own line.
 5. **Render the layer:** `reel.py hf render graphics --format webm -o out/overlay.webm --quiet` (VP9 with alpha;
    `--format mov` gives ProRes 4444, much larger).
 6. **Lay it over the cut:** `ff overlay <cut> --video out/overlay.webm --position center --scale 1080 --margin 0`,

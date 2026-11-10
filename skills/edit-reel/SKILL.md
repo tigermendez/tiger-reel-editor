@@ -69,10 +69,18 @@ project per moment. Steps and cautions: `references/long-to-shorts.md`.
 - **Cuts:** `reel.py silences <video>` lists pauses; repeated takes stay in the transcript on purpose — keep the
   last good take unless told otherwise. Cut with `ff cut --segments ...` or `ff silence ...`. A cut where the
   intonation keeps going sounds forced: suggest re-recording that line instead.
+- **Reels made of pieces** (camera + a voice recorded apart + screenshots or screen recordings): build each piece
+  to the exact length of what is heard, then join with no transitions. Recipes: `references/pieces.md`. Three
+  rules: even each piece's loudness before joining (`ff loudness <piece> -I -16`), because a camera mic and a
+  voice recorder never match; make screen text readable (crop the part being read, at least 1.25x, then
+  `ff fit --fit blur`); and build the cut's words with `reel.py words` from the takes, not by transcribing the
+  cut (that can drop words or mishear numbers); `--check` with a transcript of the cut lists where to listen.
 - **Captions:** first find where they fit: `reel.py face <cut video>` prints, per stretch, the height below the
   chin. Then `reel.py captions out/<clip>.words.json out/captions.ass --words 2 --y <that height>`
   (`--accent FFD400` colours the word being said; `--font`, `--size`, `--upper` from their style). Cues follow the
-  measured words. Burn with `ff caption <video> --ass out/captions.ass`. Use the `.ass`, not an `.srt`: an `.srt`
+  measured words. Burn with `ff caption <video> --ass out/captions.ass`. When the shot changes (camera, then a screen), give each stretch its own height with
+  `--y-at START-END=Y`: under the chin on camera, lower on screens so the text being read stays free.
+  Use the `.ass`, not an `.srt`: an `.srt`
   burned on a vertical video can land off centre. If a word or name is wrong (Whisper often hears brand names
   as common words: "Claude" as "Club"), fix it everywhere and re-time in one step:
   `reel.py fix <media> <out-prefix> --replace Club=Claude --language <xx>`; for other edits change the phrase

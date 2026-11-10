@@ -8,7 +8,8 @@
                                                                      .txt, .srt by phrase, .words.json (time of every word)
   reel.py align <video> <phrases.srt> <out.words.json> [--language es] re-time words after fixing the .srt
   reel.py fix <video> <out-prefix> --replace Club=Claude [--language es]  fix misheard words everywhere and re-time
-  reel.py captions <words.json> <out.srt> [--words 2] [--upper]      short caption cues that follow the voice
+  reel.py words <pieces.json> -o cut.words.json [--check heard.json] words of a cut made of pieces, from the takes
+  reel.py captions <words.json> <out.ass> [--words 2] [--y 1150] [--y-at 20-60=1380]  captions that follow the voice
   reel.py silences <video> [--db -38] [--min 0.3]                    where the pauses are (start end length)
   reel.py face <video> [--texts captions.srt --band 1150-1250] [--json face.json]
                                                                      where the face is; does any text cover it?
@@ -126,6 +127,53 @@ def cmd_fix(rest):
                                            "--language", a.language])
 
 
+def _seconds(path):
+    r = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(path)],
+                       capture_output=True, text=True)
+    return float(r.stdout.strip())
+
+
+def _key(w):
+    k = re.sub(r"[^\w]", "", w.lower())
+    return k
+
+
+def cmd_words(rest):
+    p = argparse.ArgumentParser(prog="reel.py words", description=(
+        "Words for a cut built from pieces: each piece's words come from its take's own (checked) .words.json, "
+        "shifted to where the piece starts in the cut, using each rendered piece's real length. Safer than "
+        "re-transcribing the cut, which can drop words or mishear numbers. With --check, lists where a transcript "
+        "of the cut disagrees, so the person can listen there."))
+    p.add_argument("pieces", help='JSON list: [{"words": "take.words.json", "from": 12.3, "to": 15.8, '
+                                  '"file": "piece01.mp4"} ...] in cut order ("length": s instead of "file" is ok)')
+    p.add_argument("-o", "--output", required=True)
+    p.add_argument("--check", help="a .words.json from transcribing the cut, to compare")
+    a = p.parse_args(rest)
+    pieces = json.loads(Path(a.pieces).read_text(encoding="utf-8"))
+    base = Path(a.pieces).parent
+    out, t = [], 0.0
+    for pc in pieces:
+        src = json.loads((base / pc["words"]).read_text(encoding="utf-8"))
+        f, z = float(pc["from"]), float(pc["to"])
+        for w in src:
+            if w["start"] >= f - 0.02 and w["end"] <= z + 0.05:
+                out.append({"w": w["w"], "start": round(w["start"] - f + t, 2), "end": round(w["end"] - f + t, 2)})
+        t += float(pc["length"]) if "length" in pc else _seconds(base / pc["file"])
+    Path(a.output).write_text(json.dumps(out, ensure_ascii=False, indent=0), encoding="utf-8")
+    print(f"{len(out)} words from {len(pieces)} pieces ({t:.2f} s) → {a.output}")
+    if a.check:
+        import difflib
+        heard = json.loads(Path(a.check).read_text(encoding="utf-8"))
+        A, B = [_key(w["w"]) for w in out], [_key(w["w"]) for w in heard]
+        diffs = [op for op in difflib.SequenceMatcher(None, A, B, autojunk=False).get_opcodes() if op[0] != "equal"]
+        for op, i1, i2, j1, j2 in diffs:
+            when = out[i1]["start"] if i1 < len(out) else (out[-1]["end"] if out else 0)
+            print(f"  {when:7.2f} s  takes: {' '.join(w['w'] for w in out[i1:i2]) or '—'}"
+                  f"   |   cut: {' '.join(w['w'] for w in heard[j1:j2]) or '—'}")
+        print(f"{len(diffs)} difference(s): listen there" if diffs else "the cut's transcript agrees with the takes")
+    return 0
+
+
 def ts(t):
     ms = max(0, round(t * 1000))
     return f"{ms // 3600000:02}:{ms // 60000 % 60:02}:{ms // 1000 % 60:02},{ms % 1000:03}"
@@ -142,6 +190,8 @@ def cmd_captions(rest):
     p.add_argument("--upper", action="store_true")
     g = p.add_argument_group("styled .ass output (when <out> ends in .ass)")
     g.add_argument("--y", type=int, default=1150, help="top of the caption in px; use what `face` says fits (1150)")
+    g.add_argument("--y-at", action="append", default=[], metavar="START-END=Y",
+                   help="a different height for a stretch, e.g. 23.5-85=1350 (screens: keep the text being read free)")
     g.add_argument("--size", type=int, default=86, help="font size in px (86)")
     g.add_argument("--font", default="Arial", help="font family installed on this machine (Arial)")
     g.add_argument("--color", default="FFFFFF", help="text colour, hex RRGGBB (FFFFFF)")
@@ -206,9 +256,15 @@ def write_ass(a, timed, fix):
         f"100,100,0,0,1,{a.outline},2,8,40,40,0,1", "",
         "[Events]", "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
     ]
-    pos = f"{{\\an8\\pos({a.width // 2},{a.y})}}"
+    stretches = []
+    for spec in a.y_at:
+        span, y = spec.split("=")
+        s0, s1 = (float(x) for x in span.split("-"))
+        stretches.append((s0, s1, int(y)))
     lines = []
     for c, start, end in timed:
+        y = next((yy for s0, s1, yy in stretches if s0 <= start < s1), a.y)
+        pos = f"{{\\an8\\pos({a.width // 2},{y})}}"
         words = [esc(fix(x["w"])) for x in c]
         if not a.accent:
             lines.append(f"Dialogue: 0,{t(start)},{t(end)},Reel,,0,0,0,,{pos}{' '.join(words).strip(' ,;:')}")
@@ -441,7 +497,7 @@ def cmd_sfx(rest):
 
 
 COMMANDS = {"setup": cmd_setup, "doctor": cmd_doctor, "new": cmd_new, "transcribe": cmd_transcribe,
-            "align": cmd_align, "fix": cmd_fix, "captions": cmd_captions, "silences": cmd_silences, "face": cmd_face,
+            "align": cmd_align, "fix": cmd_fix, "words": cmd_words, "captions": cmd_captions, "silences": cmd_silences, "face": cmd_face,
             "review": cmd_review, "voice": cmd_voice, "ff": cmd_ff,
             "hf": cmd_hf, "overlaps": cmd_overlaps, "cutout": cmd_cutout, "level": cmd_level, "sfx": cmd_sfx}
 
