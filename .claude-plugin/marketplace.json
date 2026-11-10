@@ -1,0 +1,12 @@
+{
+  "name": "tiger-reel-editor",
+  "description": "Tiger Mendez's skills for Claude Code.",
+  "owner": { "name": "Tiger Mendez", "url": "https://tigermendez.com" },
+  "plugins": [
+    {
+      "name": "tiger-reel-editor",
+      "source": "./",
+      "description": "Edit Reels, TikToks and Shorts with Claude: story first, word-exact captions, face check, final review."
+    }
+  ]
+}

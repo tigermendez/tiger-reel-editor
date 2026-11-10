@@ -1,0 +1,72 @@
+# Proves "works on macOS and Windows": installs the core module from scratch the way a user would, then pushes a
+# synthetic talking clip through the whole flow (tests/e2e.py). Models are cached between runs.
+name: end-to-end
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    env:
+      TIGER_REEL_EDITOR_HOME: ${{ github.workspace }}/../reel-home
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Static checks
+        run: python -m py_compile skills/edit-reel/scripts/reel.py skills/edit-reel/scripts/_env.py skills/edit-reel/scripts/_setup.py skills/edit-reel/scripts/review.py skills/edit-reel/scripts/speech.py skills/edit-reel/scripts/face.py skills/edit-reel/scripts/voice.py tests/e2e.py
+
+      - name: Cache models
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/../reel-home/models
+          key: models-${{ runner.os }}-${{ hashFiles('skills/edit-reel/scripts/_setup.py') }}
+
+      # The same path a user takes: setup asks first (exit 3), then installs with --yes.
+      - name: Setup asks before installing system programs
+        shell: bash
+        run: |
+          set +e
+          python skills/edit-reel/scripts/reel.py setup --language en
+          code=$?
+          echo "exit code: $code"
+          if [ "$code" != "0" ] && [ "$code" != "3" ]; then exit 1; fi
+
+      - name: Setup (core module)
+        run: python skills/edit-reel/scripts/reel.py setup --language en --yes
+
+      - name: Doctor
+        run: python skills/edit-reel/scripts/reel.py doctor
+
+      - name: End to end
+        run: python tests/e2e.py --keep ${{ runner.temp }}/e2e
+
+      - name: Keep the result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-${{ runner.os }}
+          path: |
+            ${{ runner.temp }}/e2e/*.srt
+            ${{ runner.temp }}/e2e/*.json
+            ${{ runner.temp }}/e2e/*.jpg
+            ${{ runner.temp }}/e2e/reel_v1.mp4
+          if-no-files-found: ignore
