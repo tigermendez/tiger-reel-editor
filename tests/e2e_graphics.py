@@ -105,6 +105,12 @@ def main():
     for c in rep["checks"]:
         if c["name"] != "Loudness of the mix":  # a sine tone, not a voice: loudness is checked in e2e.py
             check(c["pass"], f"review: {c['name']} = {c['actual']}")
+    # Cutout runs and gives a transparent layer (no person in a synthetic clip: we only check the pipeline).
+    sh(*reel, "ff", "cut", d / "clip.mp4", "--start", "0", "--end", "1", "-o", d / "short.mp4", "--overwrite")
+    sh(*reel, "cutout", d / "short.mp4", "-o", d / "person.webm", "--quality", "fast")
+    alpha = sh("ffprobe", "-v", "error", "-show_entries", "stream_tags=alpha_mode", "-of", "csv=p=0",
+               d / "person.webm").stdout.strip()
+    check(alpha == "1", "cutout writes a transparent layer")
     print(f"\nGRAPHICS END TO END OK  ({d})")
     if not keep:
         shutil.rmtree(d, ignore_errors=True)

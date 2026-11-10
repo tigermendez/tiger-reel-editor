@@ -28,7 +28,7 @@ Then open Claude Code in a folder with your video and say: *"Edit this clip into
 | **Captions on every word** | Measures where each word is actually said (not where Whisper guesses), 1–2 words per caption. Fix a word, re-time in one command | WhisperX alignment |
 | **Face check** | Tells you from which height captions fit below your chin, and fails if any text covers your face or mouth | MediaPipe |
 | **Final review** | 1080×1920, 30 fps, H.264/AAC, −14 LUFS, true peak ≤ −1 dBTP, length — pass/fail, plus a contact sheet to look at | FFmpeg |
-| **Graphics** *(optional)* | Titles, list counters and cards timed to your words, checked so nothing covers your face | HyperFrames |
+| **Graphics** *(optional)* | Titles, list counters and cards timed to your words, checked so nothing covers your face; text behind your head | HyperFrames |
 | **Sound effects** | A starter set made from scratch (whoosh, pop, ding…), placed at exact times under your voice | FFmpeg |
 | **Your style** | A `style.md` in your words that Claude follows and grows every time you correct it twice | — |
 
@@ -92,7 +92,7 @@ redistribution); you get a starter set of effects made from scratch, and
 All through one entry point: `python3 skills/edit-reel/scripts/reel.py <command>` (`python` on Windows).
 
 ```
-setup · doctor · new · transcribe · align · captions · silences · face · sfx · level · review · voice · overlaps
+setup · doctor · new · transcribe · align · captions · silences · face · sfx · level · review · voice · overlaps · cutout
 ff <ffmpeg-skill tool> · hf <HyperFrames command>
 ```
 

@@ -24,6 +24,19 @@ Remotion is a fine alternative if the person already uses React; the checks belo
    then the usual `ff export --preset reels`, `reel.py level` and `reel.py review`.
 7. **Look** at frames where each element enters; check text size on a phone-sized view.
 
+## Text behind the head
+
+`reel.py cutout <cut> -o out/person.webm` cuts the person out of the final cut (HyperFrames' local model, ~170 MB
+the first time; about 5–6 s of processing per second of video on an M4). Then stack three layers:
+
+1. the cut;
+2. the text or graphic (`ff overlay --text` for plain text, or a HyperFrames layer for styled text);
+3. the cutout on top: `ff overlay <cut+text> --video out/person.webm --position center --scale 1080 --margin 0`.
+
+Place the text so it crosses the top of the head (use `reel.py face` for where the head is): the head hides part
+of the letters and they read as being behind it. Use it for the one word that matters, not as a habit. Hair,
+hands and fast movement can leave rough edges: look at the frames.
+
 ## Layout rules that work for vertical video
 
 - The top ~240 px belong to the app's own interface; the bottom ~20 % and the right ~12 % too (`review.md`).

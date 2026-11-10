@@ -18,6 +18,7 @@
   reel.py ff <tool> [args...]                                        run an ffmpeg-skill tool (cut, silence, caption, loudness, export, check, look...)
   reel.py ff                                                         where ffmpeg-skill's own SKILL.md is
   reel.py hf <args...>                                               pinned HyperFrames CLI (module 'graphics'): init, render, lint...
+  reel.py cutout <video> -o person.webm                              the person alone, transparent (text behind the head)
   reel.py overlaps <composition> [--face face.json]                  graphics that overlap each other or cover the face
 """
 import argparse
@@ -250,6 +251,31 @@ def cmd_hf(rest):
     return subprocess.run([*E.hyperframes_cmd(), *rest]).returncode
 
 
+def cmd_cutout(rest):
+    """Cut the person out of a video (transparent WebM/MOV/PNG) with HyperFrames' local model (module graphics)."""
+    if not (E.GRAPHICS / "node_modules" / "hyperframes").exists():
+        sys.exit("error: the 'graphics' module is not installed. Run: reel.py setup --module graphics")
+    p = argparse.ArgumentParser(prog="reel.py cutout", description=(
+        "Cut the person out of a clip: a transparent layer of just them (and optionally the background with a "
+        "person-shaped hole). Use it to put text or graphics BEHIND the head: cut video, then the text layer, then "
+        "this cutout on top. Cut out the final cut itself so every frame lines up. The model (~170 MB) downloads "
+        "the first time; on a Mac it runs on the Apple chip."))
+    p.add_argument("video")
+    p.add_argument("-o", "--output", required=True, help=".webm (default), .mov (ProRes 4444) or .png for an image")
+    p.add_argument("--background", help="also write the background with a hole where the person is (.webm/.mov)")
+    p.add_argument("--quality", choices=["fast", "balanced", "best"], default="balanced")
+    a = p.parse_args(rest)
+    cmd = [*E.hyperframes_cmd(), "remove-background", str(Path(a.video).resolve()), "-o",
+           str(Path(a.output).resolve()), "--quality", a.quality]
+    if a.background:
+        cmd += ["-b", str(Path(a.background).resolve())]
+    r = subprocess.run(cmd, cwd=E.GRAPHICS, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    if r.returncode:
+        sys.exit(f"error: cutout failed:\n{(r.stderr or r.stdout)[-1500:]}")
+    print(f"cutout → {a.output}" + (f"  background → {a.background}" if a.background else ""))
+    return 0
+
+
 def cmd_overlaps(rest):
     if not (E.GRAPHICS / "node_modules" / "hyperframes").exists():
         sys.exit("error: the 'graphics' module is not installed. Run: reel.py setup --module graphics")
@@ -365,7 +391,7 @@ def cmd_sfx(rest):
 COMMANDS = {"setup": cmd_setup, "doctor": cmd_doctor, "new": cmd_new, "transcribe": cmd_transcribe,
             "align": cmd_align, "captions": cmd_captions, "silences": cmd_silences, "face": cmd_face,
             "review": cmd_review, "voice": cmd_voice, "ff": cmd_ff,
-            "hf": cmd_hf, "overlaps": cmd_overlaps, "level": cmd_level, "sfx": cmd_sfx}
+            "hf": cmd_hf, "overlaps": cmd_overlaps, "cutout": cmd_cutout, "level": cmd_level, "sfx": cmd_sfx}
 
 
 def main():

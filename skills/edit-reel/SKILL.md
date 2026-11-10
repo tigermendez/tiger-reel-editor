@@ -80,7 +80,7 @@ Homebrew or winget: show the printed commands, get a yes, and rerun with `--yes`
 - **Graphics** (titles, list counters, cards, calls to action): module `graphics` (HyperFrames). Build them as a
   transparent layer timed to the cut's words, check with `reel.py overlaps <dir> --face face.json` before
   rendering, render with `reel.py hf render`, lay over with `ff overlay`. Method and layout rules:
-  `references/graphics.md`. Sound effects: `references/sounds.md`.
+  `references/graphics.md`. Text behind the head: `reel.py cutout` (same module), steps in that file.
 
 ## 3. Check before showing anything
 
