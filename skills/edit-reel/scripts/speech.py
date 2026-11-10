@@ -105,8 +105,10 @@ def moments_to_listen(heard, threshold):
     Low confidence is where stumbles, half-said words, mumbles, mispronunciations and unknown names show up. It is
     a pointer for the person's ears, not a verdict: Whisper cannot judge tone or delivery."""
     out = []
-    for i, (st, en, w, p) in enumerate(heard):
-        if p >= threshold:
+    for i, (st, en, w, p, first) in enumerate(heard):
+        # The first word after a pause often scores low just because there is no context yet: only flag it when
+        # Whisper is really unsure.
+        if p >= threshold or (first and p >= threshold / 2):
             continue
         if out and st - out[-1]["end"] < 1.0:
             out[-1]["end"] = round(en, 2)
@@ -127,8 +129,11 @@ def cmd_transcribe(a):
     with tempfile.TemporaryDirectory() as tmp:
         wav = to_wav(a.media, tmp)
         model = WhisperModel(a.model, device="cpu", compute_type="int8", cpu_threads=os.cpu_count() or 4)
-        segs, info = model.transcribe(wav, language=a.language, initial_prompt=a.names or None, beam_size=5,
-                                      condition_on_previous_text=False, vad_filter=a.vad, word_timestamps=True)
+        # hotwords reach every 30 s window; initial_prompt alone only helps the first one when we do not condition
+        # on previous text (which we avoid so repeated takes are not skipped).
+        segs, info = model.transcribe(wav, language=a.language, initial_prompt=a.names or None,
+                                      hotwords=a.names or None, beam_size=5, condition_on_previous_text=False,
+                                      vad_filter=a.vad, word_timestamps=True)
         segments, dropped, heard = [], [], []
         for s in segs:
             if not s.text.strip():
@@ -136,7 +141,8 @@ def cmd_transcribe(a):
             bad = hallucination(s)
             (dropped if bad else segments).append({"start": s.start, "end": s.end, "text": s.text.strip()})
             if not bad:
-                heard += [(w.start, w.end, w.word.strip(), w.probability) for w in (s.words or []) if w.word.strip()]
+                ws = [w for w in (s.words or []) if w.word.strip()]
+                heard += [(w.start, w.end, w.word.strip(), w.probability, k == 0) for k, w in enumerate(ws)]
         language = a.language or info.language
         with open(a.out + ".txt", "w", encoding="utf-8") as f:
             f.write("\n".join(s["text"] for s in segments) + "\n")

@@ -7,6 +7,7 @@
   reel.py transcribe <video> <out-prefix> [--language es] [--names "Claude, Ana"]
                                                                      .txt, .srt by phrase, .words.json (time of every word)
   reel.py align <video> <phrases.srt> <out.words.json> [--language es] re-time words after fixing the .srt
+  reel.py fix <video> <out-prefix> --replace Club=Claude [--language es]  fix misheard words everywhere and re-time
   reel.py captions <words.json> <out.srt> [--words 2] [--upper]      short caption cues that follow the voice
   reel.py silences <video> [--db -38] [--min 0.3]                    where the pauses are (start end length)
   reel.py face <video> [--texts captions.srt --band 1150-1250] [--json face.json]
@@ -88,6 +89,41 @@ def cmd_transcribe(rest):
 
 def cmd_align(rest):
     return E.in_venv("core", "speech.py", ["align", *rest])
+
+
+def cmd_fix(rest):
+    p = argparse.ArgumentParser(prog="reel.py fix", description=(
+        "Fix misheard words in a transcript and re-time it: replaces whole words in <prefix>.srt and <prefix>.txt "
+        "(case-insensitive) and re-aligns <prefix>.words.json on the audio. Example: "
+        "reel.py fix raw/take.mp4 out/take --replace Club=Claude --replace 'Cloud=Claude' --language es"))
+    p.add_argument("media")
+    p.add_argument("prefix", help="what transcribe wrote: <prefix>.srt, .txt, .words.json")
+    p.add_argument("--replace", action="append", required=True, metavar="WRONG=RIGHT")
+    p.add_argument("--language", default="en")
+    a = p.parse_args(rest)
+    pairs = []
+    for r in a.replace:
+        if "=" not in r:
+            p.error(f"--replace needs WRONG=RIGHT, got {r!r}")
+        wrong, right = (x.strip() for x in r.split("=", 1))
+        pairs.append((re.compile(rf"(?<!\w){re.escape(wrong)}(?!\w)", re.I), right, wrong))
+    total = 0
+    for ext in (".srt", ".txt"):
+        f = Path(a.prefix + ext)
+        if not f.exists():
+            continue
+        text = f.read_text(encoding="utf-8")
+        for rx, right, wrong in pairs:
+            text, n = rx.subn(right, text)
+            if ext == ".srt":
+                total += n
+                print(f"  {wrong} → {right}: {n}")
+        f.write_text(text, encoding="utf-8")
+    if not total:
+        print("nothing to replace in the .srt")
+        return 0
+    return E.in_venv("core", "speech.py", ["align", a.media, a.prefix + ".srt", a.prefix + ".words.json",
+                                           "--language", a.language])
 
 
 def ts(t):
@@ -405,7 +441,7 @@ def cmd_sfx(rest):
 
 
 COMMANDS = {"setup": cmd_setup, "doctor": cmd_doctor, "new": cmd_new, "transcribe": cmd_transcribe,
-            "align": cmd_align, "captions": cmd_captions, "silences": cmd_silences, "face": cmd_face,
+            "align": cmd_align, "fix": cmd_fix, "captions": cmd_captions, "silences": cmd_silences, "face": cmd_face,
             "review": cmd_review, "voice": cmd_voice, "ff": cmd_ff,
             "hf": cmd_hf, "overlaps": cmd_overlaps, "cutout": cmd_cutout, "level": cmd_level, "sfx": cmd_sfx}
 

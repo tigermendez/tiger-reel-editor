@@ -69,8 +69,10 @@ Homebrew or winget: show the printed commands, get a yes, and rerun with `--yes`
   chin. Then `reel.py captions out/<clip>.words.json out/captions.ass --words 2 --y <that height>`
   (`--accent FFD400` colours the word being said; `--font`, `--size`, `--upper` from their style). Cues follow the
   measured words. Burn with `ff caption <video> --ass out/captions.ass`. Use the `.ass`, not an `.srt`: an `.srt`
-  burned on a vertical video can land off centre. If a word or name is wrong, fix the phrase `.srt` from
-  transcribe and re-time it with `reel.py align`; never fix timings by hand. Timings are relative to the clip they
+  burned on a vertical video can land off centre. If a word or name is wrong (Whisper often hears brand names
+  as common words: "Claude" as "Club"), fix it everywhere and re-time in one step:
+  `reel.py fix <media> <out-prefix> --replace Club=Claude --language <xx>`; for other edits change the phrase
+  `.srt` and run `reel.py align`. Never fix timings by hand. Timings are relative to the clip they
   came from: transcribe the final cut (or shift the words) before making captions for it. Words are burned exactly
   as written: spelling is the person's to approve.
 - **Sound effects:** before the first edit, say it in two sentences, e.g. "I made you a basic set of effects
