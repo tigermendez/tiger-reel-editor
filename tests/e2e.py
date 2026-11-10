@@ -166,6 +166,22 @@ def main():
     cols = [x for x in range(108) if any(px[y * 108 + x] > 120 for y in range(11) if y * 108 + x < len(px))]
     centre = (cols[0] + cols[-1]) / 2 if cols else -1
     check(cols and abs(centre - 54) <= 6, f"caption centred at the asked height (centre column {centre} of 108)")
+    # 7. Sound effects: the starter set exists and an effect lands at its time (silence before, sound at 1.0 s).
+    listed = reel("sfx", "--list").stdout
+    check(all(n in listed for n in ("whoosh", "pop", "ding")), "starter sound effects are available")
+    sh("ffmpeg", "-nostdin", "-v", "error", "-y", "-f", "lavfi", "-i", "color=c=black:s=1080x1920:r=30:d=3", "-f",
+       "lavfi", "-i", "anullsrc=r=48000:cl=stereo", "-t", "3", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac",
+       d / "silent.mp4")
+    reel("sfx", d / "silent.mp4", "-o", d / "sfx.mp4", "--at", "1.0 pop")
+
+    def peak(start, length):
+        r = subprocess.run(["ffmpeg", "-nostdin", "-hide_banner", "-ss", str(start), "-t", str(length), "-i",
+                            str(d / "sfx.mp4"), "-af", "volumedetect", "-f", "null", "-"], capture_output=True,
+                           text=True, encoding="utf-8", errors="replace")
+        m = re.search(r"max_volume: ([-\d.]+) dB", r.stderr)
+        return float(m[1]) if m else -120.0
+    quiet, hit = peak(0, 0.8), peak(0.98, 0.25)
+    check(quiet < -60 and hit > -30, f"effect placed at 1.0 s (before: {quiet} dB, at the cue: {hit} dB)")
     print(f"\nEND TO END OK  ({d})")
     if not keep:
         shutil.rmtree(d, ignore_errors=True)

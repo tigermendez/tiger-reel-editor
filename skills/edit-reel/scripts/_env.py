@@ -24,6 +24,7 @@ FFMPEG_SKILL_DIR = HOME / "ffmpeg-skill" / FFMPEG_SKILL_VERSION
 # Default speech model: Whisper large-v3-turbo converted for faster-whisper (~1.6 GB).
 WHISPER_MODEL = os.environ.get("TIGER_REEL_EDITOR_WHISPER_MODEL", "large-v3-turbo")
 FACE_MODEL = MODELS / "blaze_face_short_range.tflite"
+SOUNDS = HOME / "sounds"  # starter sound effects, made at setup (sfx.py)
 GRAPHICS = HOME / "graphics"  # module 'graphics': pinned HyperFrames and its node_modules
 
 

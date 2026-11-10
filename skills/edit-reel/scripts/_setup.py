@@ -204,6 +204,10 @@ def ensure_core_models(languages, model):
         with urllib.request.urlopen(FACE_MODEL_URL, timeout=120) as r:
             E.FACE_MODEL.write_bytes(r.read())
     ok("face model (BlazeFace, 0.2 MB)")
+    if not (E.SOUNDS / "whoosh.wav").exists():
+        import sfx
+        sfx.make_starter(E.SOUNDS)
+    ok(f"starter sound effects in {E.SOUNDS}")
 
 
 def ensure_npm(packages):

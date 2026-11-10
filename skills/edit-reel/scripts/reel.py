@@ -11,6 +11,7 @@
   reel.py silences <video> [--db -38] [--min 0.3]                    where the pauses are (start end length)
   reel.py face <video> [--texts captions.srt --band 1150-1250] [--json face.json]
                                                                      where the face is; does any text cover it?
+  reel.py sfx <video> -o <out> --at "1.2 whoosh" [--at ...]        sound effects at exact times (--starter DIR: basic set)
   reel.py level <video> -o <out>                                     final mix to -14 LUFS, peaks safe, no distortion
   reel.py review <video> [--platform reels|tiktok|shorts] [--sheet]  final technical check (exit 0 = passes)
   reel.py voice <video> <out.wav>                                    clean voice (module 'voice')
@@ -322,10 +323,49 @@ def cmd_level(rest):
     return 0 if good else 1
 
 
+def cmd_sfx(rest):
+    import sfx
+    p = argparse.ArgumentParser(prog="reel.py sfx", description=(
+        "Sound effects. --starter DIR makes a basic set (whoosh, pop, click, ding, riser, impact) from scratch, free "
+        "to use. Otherwise places effects at exact times under the voice: --at '1.2 whoosh' (repeat), or --cues "
+        "file with one 'time sound [dB]' per line. Sounds are looked up by name in --dir, ./sounds and the set "
+        "made at setup. Run `reel.py level` after: effects change the mix loudness."))
+    p.add_argument("video", nargs="?")
+    p.add_argument("-o", "--output")
+    p.add_argument("--at", action="append", default=[], help="'time sound [dB]', e.g. '3.2 whoosh -4'")
+    p.add_argument("--cues", help="text file, one 'time sound [dB]' per line (# comments)")
+    p.add_argument("--dir", action="append", default=[], help="folder with your own sounds (repeatable)")
+    p.add_argument("--level", type=float, default=-10.0, help="effects level vs. their -3 dBFS peak (-10 dB)")
+    p.add_argument("--starter", metavar="DIR", help="make the starter set in DIR and stop")
+    p.add_argument("--list", action="store_true", help="list the sounds that can be called by name")
+    a = p.parse_args(rest)
+    E.need("ffmpeg", "FFmpeg is required.")
+    folders = [Path(x) for x in a.dir] + [Path("sounds"), E.SOUNDS]
+    if a.starter:
+        names = sfx.make_starter(a.starter)
+        print(f"starter set in {a.starter}: {', '.join(names)}")
+        return 0
+    if a.list:
+        for d in folders:
+            if d.is_dir():
+                names = sorted(f.stem for f in d.iterdir() if f.suffix.lower() in sfx.SUFFIXES)
+                print(f"{d}: {', '.join(names) or '(empty)'}")
+        return 0
+    lines = list(a.at)
+    if a.cues:
+        lines += [l.split("#")[0].strip() for l in Path(a.cues).read_text(encoding="utf-8").splitlines()]
+    cues = [sfx.parse_cue(l) for l in lines if l]
+    if not (a.video and a.output and cues):
+        p.error("give a video, -o OUTPUT and at least one --at or --cues")
+    sfx.place(a.video, a.output, cues, folders, a.level)
+    print(f"{len(cues)} effects → {a.output}  (now run: reel.py level {a.output} -o <final>)")
+    return 0
+
+
 COMMANDS = {"setup": cmd_setup, "doctor": cmd_doctor, "new": cmd_new, "transcribe": cmd_transcribe,
             "align": cmd_align, "captions": cmd_captions, "silences": cmd_silences, "face": cmd_face,
             "review": cmd_review, "voice": cmd_voice, "ff": cmd_ff,
-            "hf": cmd_hf, "overlaps": cmd_overlaps, "level": cmd_level}
+            "hf": cmd_hf, "overlaps": cmd_overlaps, "level": cmd_level, "sfx": cmd_sfx}
 
 
 def main():

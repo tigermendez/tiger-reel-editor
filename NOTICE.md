@@ -12,4 +12,5 @@ This repository contains no third-party code. At install time, `reel.py setup` d
 | [HyperFrames](https://github.com/heygen-com/hyperframes) 0.9.27 by HeyGen (graphics module) | Apache-2.0 | Pinned npm package; renders HTML graphics with its own headless Chrome |
 | [DeepFilterNet](https://github.com/Rikorose/DeepFilterNet) (voice module) | MIT / Apache-2.0 | Clean voice |
 
-No sound effects or music are included: see `skills/edit-reel/references/sounds.md`.
+No music or sample sound effects are included. The starter effects are synthesised at setup from FFmpeg's
+generators (`skills/edit-reel/scripts/sfx.py`), part of this MIT project. See `skills/edit-reel/references/sounds.md`.

@@ -29,6 +29,7 @@ Then open Claude Code in a folder with your video and say: *"Edit this clip into
 | **Face check** | Tells you from which height captions fit below your chin, and fails if any text covers your face or mouth | MediaPipe |
 | **Final review** | 1080×1920, 30 fps, H.264/AAC, −14 LUFS, true peak ≤ −1 dBTP, length — pass/fail, plus a contact sheet to look at | FFmpeg |
 | **Graphics** *(optional)* | Titles, list counters and cards timed to your words, checked so nothing covers your face | HyperFrames |
+| **Sound effects** | A starter set made from scratch (whoosh, pop, ding…), placed at exact times under your voice | FFmpeg |
 | **Your style** | A `style.md` in your words that Claude follows and grows every time you correct it twice | — |
 
 The hands — cutting, burning captions, loudness, exporting — come from
@@ -82,15 +83,16 @@ Manual install and troubleshooting: [`references/install.md`](skills/edit-reel/r
 
 Want animated titles, list counters or a call-to-action card? Add the **graphics** module: it installs a pinned
 [HyperFrames](https://hyperframes.heygen.com) (by HeyGen) and checks that no graphic overlaps another or covers
-your face before rendering. Sound effects are not included (most free libraries do not allow redistribution) —
-[where to get them](skills/edit-reel/references/sounds.md).
+your face before rendering. Music and sample libraries are not included (most free libraries do not allow
+redistribution); you get a starter set of effects made from scratch, and
+[where to get better ones](skills/edit-reel/references/sounds.md).
 
 ## Tools
 
 All through one entry point: `python3 skills/edit-reel/scripts/reel.py <command>` (`python` on Windows).
 
 ```
-setup · doctor · new · transcribe · align · captions · silences · face · review · voice · overlaps
+setup · doctor · new · transcribe · align · captions · silences · face · sfx · level · review · voice · overlaps
 ff <ffmpeg-skill tool> · hf <HyperFrames command>
 ```
 

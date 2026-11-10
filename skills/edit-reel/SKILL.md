@@ -63,6 +63,13 @@ Homebrew or winget: show the printed commands, get a yes, and rerun with `--yes`
   transcribe and re-time it with `reel.py align`; never fix timings by hand. Timings are relative to the clip they
   came from: transcribe the final cut (or shift the words) before making captions for it. Words are burned exactly
   as written: spelling is the person's to approve.
+- **Sound effects:** always tell the person how sound works here before the first edit: this skill ships no
+  music or sample effects (licences forbid redistributing them), but setup made a starter set from scratch —
+  whoosh, pop, click, ding, riser, impact (`reel.py sfx --list`). Offer it, and say where better ones come from
+  (`references/sounds.md`); their own files go in `sounds/` and are called by name. Place effects with
+  `reel.py sfx <video> -o <out> --at "3.2 whoosh" --at "5.1 pop -4"` (or `--cues file`), timed from the words or
+  the graphics, soft (default -10 dB, adjust per effect), never over a word that matters. Then `reel.py level`.
+  Music under the whole reel: `ff audio <video> --music bed.mp3 --duck`; trending audio goes in the app.
 - **Voice:** `ff audio --voice` for a quick clean; `reel.py voice` (module voice) for noisy rooms and echo.
 - **Export and loudness:** `ff export <video> --preset reels` (H.264/AAC 1080x1920 30 fps; `tiktok` and `shorts`
   presets too), then `reel.py level <export> -o out/<slug>_vN.mp4`: it measures the mix, shaves the peaks with a
