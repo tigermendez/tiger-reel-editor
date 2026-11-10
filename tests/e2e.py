@@ -169,6 +169,7 @@ def main():
     # 7. Sound effects: the starter set exists and an effect lands at its time (silence before, sound at 1.0 s).
     listed = reel("sfx", "--list").stdout
     check(all(n in listed for n in ("whoosh", "pop", "ding")), "starter sound effects are available")
+    check("something slides in" in listed, "each starter sound says when to use it (sounds.txt)")
     sh("ffmpeg", "-nostdin", "-v", "error", "-y", "-f", "lavfi", "-i", "color=c=black:s=1080x1920:r=30:d=3", "-f",
        "lavfi", "-i", "anullsrc=r=48000:cl=stereo", "-t", "3", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac",
        d / "silent.mp4")

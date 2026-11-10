@@ -24,6 +24,55 @@ STARTER = {
                "[1:a]lowpass=f=400,afade=t=out:d=0.25:curve=exp[n];[0:a][n]amix=inputs=2:normalize=0"],
 }
 SUFFIXES = (".wav", ".mp3", ".m4a", ".aac", ".ogg", ".flac")
+STARTER_DESC = {
+    "whoosh": "soft air swoosh, 0.55 s — something slides in (a title, a panel, a new screen)",
+    "pop": "short bubbly pop, 0.15 s — something appears (a list item, a sticker, a word)",
+    "click": "tiny UI click, 0.04 s — a tap, a toggle, a cursor action on screen",
+    "ding": "bright two-note ding, 1.2 s — a result, a success, a check mark",
+    "riser": "rising tone and air, 1.5 s — tension right before a reveal (ends on the reveal)",
+    "impact": "low thump, 0.9 s — the punchline, a big number, a hard cut to the point",
+}
+CATALOG = "sounds.txt"  # one 'name: what it sounds like — when to use it' per line, in each sounds folder
+
+
+def read_catalog(folder):
+    f = Path(folder) / CATALOG
+    out = {}
+    if f.exists():
+        for line in f.read_text(encoding="utf-8").splitlines():
+            if ":" in line and not line.lstrip().startswith("#"):
+                name, text = line.split(":", 1)
+                out[name.strip()] = text.strip()
+    return out
+
+
+def describe(folder, name, text):
+    """Add or replace one sound's line in the folder's sounds.txt."""
+    folder = Path(folder)
+    folder.mkdir(parents=True, exist_ok=True)
+    f = folder / CATALOG
+    lines = f.read_text(encoding="utf-8").splitlines() if f.exists() else [
+        "# What each sound is and when to use it. One line per file name (without extension).",
+        "# Claude cannot hear: it chooses sounds from these lines. Keep them short and concrete."]
+    lines = [l for l in lines if not (":" in l and l.split(":", 1)[0].strip() == name)]
+    lines.append(f"{name}: {text}")
+    f.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def listing(folders):
+    """Every callable sound with its description; flags files nobody has described yet."""
+    rows, missing = [], []
+    for d in folders:
+        d = Path(d)
+        if not d.is_dir():
+            continue
+        cat = read_catalog(d)
+        for f in sorted(x for x in d.iterdir() if x.suffix.lower() in SUFFIXES):
+            desc = cat.get(f.stem)
+            rows.append((d, f.stem, desc))
+            if not desc:
+                missing.append((d, f.stem))
+    return rows, missing
 
 
 def ff(*args, capture=False):
@@ -48,9 +97,12 @@ def make_starter(folder):
             ff("-v", "error", "-y", *recipe, "-ac", "1", raw)
             gain = -3.0 - peak_db(raw)  # every sound peaks at -3 dBFS, so levels are comparable
             ff("-v", "error", "-y", "-i", raw, "-af", f"volume={gain:.2f}dB", "-ac", "2", folder / f"{name}.wav")
+    for name, text in STARTER_DESC.items():
+        describe(folder, name, text)
     (folder / "README.txt").write_text(
         "Starter sound effects made by edit-reel from FFmpeg's generators (no samples, free to use anywhere).\n"
-        "Add your own files here (wav, mp3...) and call them by name: reel.py sfx ... --at '3.2 whoosh'.\n",
+        "Add your own files here (wav, mp3...), describe each in sounds.txt (or: reel.py sfx --describe NAME 'what\n"
+        "it is — when to use it'), and call them by name: reel.py sfx ... --at '3.2 whoosh'.\n",
         encoding="utf-8")
     return sorted(p.stem for p in folder.glob("*.wav"))
 

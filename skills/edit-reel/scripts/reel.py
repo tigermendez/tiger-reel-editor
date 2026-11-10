@@ -363,7 +363,9 @@ def cmd_sfx(rest):
     p.add_argument("--dir", action="append", default=[], help="folder with your own sounds (repeatable)")
     p.add_argument("--level", type=float, default=-10.0, help="effects level vs. their -3 dBFS peak (-10 dB)")
     p.add_argument("--starter", metavar="DIR", help="make the starter set in DIR and stop")
-    p.add_argument("--list", action="store_true", help="list the sounds that can be called by name")
+    p.add_argument("--list", action="store_true", help="list the sounds that can be called by name, with descriptions")
+    p.add_argument("--describe", nargs=2, metavar=("NAME", "TEXT"),
+                   help="write NAME's line in sounds.txt (first --dir, else ./sounds): 'what it is — when to use it'")
     a = p.parse_args(rest)
     E.need("ffmpeg", "FFmpeg is required.")
     folders = [Path(x) for x in a.dir] + [Path("sounds"), E.SOUNDS]
@@ -371,11 +373,25 @@ def cmd_sfx(rest):
         names = sfx.make_starter(a.starter)
         print(f"starter set in {a.starter}: {', '.join(names)}")
         return 0
+    if a.describe:
+        name, text = a.describe
+        target = Path(a.dir[0]) if a.dir else Path("sounds")
+        sfx.describe(target, name, text)
+        print(f"{target / sfx.CATALOG}: {name}: {text}")
+        return 0
     if a.list:
-        for d in folders:
-            if d.is_dir():
-                names = sorted(f.stem for f in d.iterdir() if f.suffix.lower() in sfx.SUFFIXES)
-                print(f"{d}: {', '.join(names) or '(empty)'}")
+        rows, missing = sfx.listing(folders)
+        last = None
+        for d, name, desc in rows:
+            if d != last:
+                print(f"{d}:")
+                last = d
+            print(f"  {name:18} {desc or '(no description yet)'}")
+        if not rows:
+            print("no sounds found. Make the starter set: reel.py sfx --starter sounds")
+        if missing:
+            print(f"\n{len(missing)} sound(s) without a description. Ask the person what each one sounds like and when "
+                  "they want it, then: reel.py sfx --describe NAME 'what it is — when to use it' --dir <folder>")
         return 0
     lines = list(a.at)
     if a.cues:

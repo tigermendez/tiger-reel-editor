@@ -64,12 +64,14 @@ Homebrew or winget: show the printed commands, get a yes, and rerun with `--yes`
   transcribe and re-time it with `reel.py align`; never fix timings by hand. Timings are relative to the clip they
   came from: transcribe the final cut (or shift the words) before making captions for it. Words are burned exactly
   as written: spelling is the person's to approve.
-- **Sound effects:** always tell the person how sound works here before the first edit: this skill ships no
-  music or sample effects (licences forbid redistributing them), but setup made a starter set from scratch —
-  whoosh, pop, click, ding, riser, impact (`reel.py sfx --list`). Offer it, and say where better ones come from
-  (`references/sounds.md`); their own files go in `sounds/` and are called by name. Place effects with
+- **Sound effects:** before the first edit, always tell the person how sound works here: no music or sample
+  library is included (their licences forbid redistributing the files), but setup made a starter set from
+  scratch (`reel.py sfx --list` shows each with what it is for), and `references/sounds.md` has links to better
+  ones and how to save them. Their files go in `sounds/` with clear names; you choose sounds only from names and
+  `sounds.txt` lines, because you cannot hear. When `--list` shows a sound with no description, ask the person
+  what it is and when they want it, and save it with `reel.py sfx --describe`. Place effects with
   `reel.py sfx <video> -o <out> --at "3.2 whoosh" --at "5.1 pop -4"` (or `--cues file`), timed from the words or
-  the graphics, soft (default -10 dB, adjust per effect), never over a word that matters. Then `reel.py level`.
+  the graphics, soft, never over a word that matters; then `reel.py level`, and ask them to listen.
   Music under the whole reel: `ff audio <video> --music bed.mp3 --duck`; trending audio goes in the app.
 - **Voice:** `ff audio --voice` for a quick clean; `reel.py voice` (module voice) for noisy rooms and echo.
 - **Export and loudness:** `ff export <video> --preset reels` (H.264/AAC 1080x1920 30 fps; `tiktok` and `shorts`
