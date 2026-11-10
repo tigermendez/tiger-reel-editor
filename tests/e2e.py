@@ -223,6 +223,10 @@ def main():
         ass = (d / "text.text.ass").read_text(encoding="utf-8")
         check("Dialogue: 0,0:00:00.00," in ass and "&H00B5F8FF&" in ass and (d / "text.mp4").exists(),
               "fixed text stays the whole clip, marked word in the accent colour")
+        reel("text", d / "raw.mp4", "Curvy letters", "-o", d / "curvy.mp4", "--font", ttf, "--color", "F8C300",
+             "--y", "900", "--fisheye", "0.3")
+        check((d / "curvy.text" / "warped.png").exists() and (d / "curvy.mp4").exists(),
+              "fisheye text: transparent bulged layer laid over the clip")
     else:
         print("  --  font download skipped (no access to GitHub)")
 

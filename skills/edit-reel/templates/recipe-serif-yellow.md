@@ -1,7 +1,8 @@
 # Recipe: soft serif in mustard yellow (trend, 2026)
 
 One **fixed sentence** on screen for the whole short clip (a few seconds) — not captions that follow the voice —
-in a tall, soft serif (the "curvy letters" look) and a warm mustard yellow, with no outline. Learned from a
+in a tall, soft serif, **bulged like a fisheye lens** (the "curvy letters" effect: bigger in the middle, the top
+and bottom lines bending away) and a warm mustard yellow, with no outline. Learned from a
 trending tutorial reel (the font there is Advercase).
 
 ## What makes it this style
@@ -10,17 +11,18 @@ trending tutorial reel (the font there is Advercase).
   put it in `fonts/`); **Instrument Serif** (free, Google Fonts) is the closest free match.
 - Mustard yellow **#F8C300**; a lighter yellow **#FFF8B5** for one or two marked words. The light one reads best
   over darker parts of the picture.
+- The fisheye bulge: what makes the letters look curved. The text is flat; the lens effect bends it.
 - No black outline; a soft shadow so it still reads on bright backgrounds.
 
 ## What can change freely
-Size, height on screen, which words are light, line breaks, italic for one word, a short fade.
+Size, height on screen, how strong the bulge is (0.2 soft – 0.35 strong), which words are light, line breaks.
 
 ## How to build it here
 ```
 reel.py font "Instrument Serif"          # or put the Advercase file in fonts/
 reel.py text <clip> "Te enseño a poner estas letras *curvas* porque nadie te dice cómo" -o out/<slug>_v1.mp4 \
   --font fonts/InstrumentSerif/InstrumentSerif-Regular.ttf --size 92 --color F8C300 --accent FFF8B5 \
-  --y <a free area: away from the face (reel.py face) and the app's bottom 20 %>
+  --fisheye 0.3 --y <a free area: away from the face (reel.py face) and the app's bottom 20 %>
 ```
 Several sentences in a row: run `text` once per sentence with `--start` / `--end`. For titles or cards in the same
 look, use the same font file and colours in a graphics layer (`references/graphics.md`).

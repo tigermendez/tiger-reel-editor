@@ -344,6 +344,64 @@ def write_ass(a, timed, fix):
     Path(a.out).write_text("\n".join(head + lines) + "\n", encoding="utf-8")
 
 
+def _warped_text(ass, fontsdir, k, out):
+    """The text of an .ass as a transparent 1080x1920 PNG, bulged like a fisheye lens around the text block.
+
+    libass draws colour but no transparency, so the text is drawn twice — in colour, and in white as its alpha
+    mask — and merged. Then every pixel inside the block's circle is pulled from radius r**k (k > 1 magnifies the
+    centre and curves the edges)."""
+    ff = E.need("ffmpeg", "FFmpeg is required.")
+    work = out.with_suffix(".text")
+    work.mkdir(parents=True, exist_ok=True)
+    src = Path(ass).read_text(encoding="utf-8")
+    mask_lines = []
+    for line in src.splitlines():
+        if line.startswith("Style:"):
+            f = line.split(",")
+            f[3] = f[4] = f[5] = "&H00FFFFFF&"
+            f[6] = "&H80FFFFFF&"
+            line = ",".join(f)
+        elif line.startswith("Dialogue:"):
+            line = re.sub(r"\\c&H[0-9A-Fa-f]+&", r"\\c&H00FFFFFF&", line)
+        mask_lines.append(line)
+    mask = work / "mask.ass"
+    mask.write_text("\n".join(mask_lines) + "\n", encoding="utf-8")
+
+    def esc(p):  # a path inside an ffmpeg filter argument
+        return str(p).replace("\\", "/").replace(":", "\\:").replace("'", "\\'")
+
+    def draw(a_file, png, gray=False):
+        vf = f"ass=filename='{esc(a_file)}'" + (f":fontsdir='{esc(fontsdir)}'" if fontsdir else "") + \
+             (",format=gray" if gray else "")
+        subprocess.run([ff, "-v", "error", "-y", "-f", "lavfi", "-i", "color=c=black:s=1080x1920", "-vf", vf,
+                        "-frames:v", "1", str(png)], check=True)
+    draw(ass, work / "colour.png")
+    draw(mask, work / "mask.png", gray=True)
+    flat = work / "flat.png"
+    subprocess.run([ff, "-v", "error", "-y", "-i", str(work / "colour.png"), "-i", str(work / "mask.png"),
+                    "-filter_complex", "[0]format=rgb24[c];[1]format=gray[m];[c][m]alphamerge,format=rgba",
+                    str(flat)], check=True)
+    raw = subprocess.run([ff, "-v", "error", "-i", str(flat), "-vf", "alphaextract", "-f", "rawvideo",
+                          "-pix_fmt", "gray", "-"], capture_output=True, check=True).stdout
+    W, H = 1080, 1920
+    rows = [y for y in range(H) if max(raw[y * W:(y + 1) * W]) > 20]
+    if not rows:
+        sys.exit("error: the text came out empty (check the font name)")
+    cols = [x for x in range(W) if any(raw[y * W + x] > 20 for y in range(rows[0], rows[-1] + 1, 2))]
+    cx, cy = (cols[0] + cols[-1]) / 2, (rows[0] + rows[-1]) / 2
+    R = max(cols[-1] - cols[0], rows[-1] - rows[0]) / 2 * 1.05
+    rr = f"hypot((X-{cx})/{R}\\,(Y-{cy})/{R})"
+    scale = f"if(lt({rr}\\,1)\\,pow({rr}\\,{k - 1})\\,1)"
+    sx, sy = f"{cx}+(X-{cx})*{scale}", f"{cy}+(Y-{cy})*{scale}"
+    expr = {c: f"{c}({sx}\\,{sy})" for c in ("r", "g", "b", "alpha")}
+    script = work / "warp.vf"
+    script.write_text(f"format=rgba,geq=r='{expr['r']}':g='{expr['g']}':b='{expr['b']}':a='{expr['alpha']}'",
+                      encoding="utf-8")
+    png = work / "warped.png"
+    subprocess.run([ff, "-v", "error", "-y", "-i", str(flat), "-/vf", str(script), str(png)], check=True)
+    return png
+
+
 def cmd_text(rest):
     p = argparse.ArgumentParser(prog="reel.py text", description=(
         "A fixed block of text on the video (not captions): the same sentence on screen for the whole clip or a "
@@ -362,6 +420,8 @@ def cmd_text(rest):
     p.add_argument("--shadow", type=float, default=3)
     p.add_argument("--start", type=float, default=0.0)
     p.add_argument("--end", type=float, default=None, help="default: the end of the video")
+    p.add_argument("--fisheye", type=float, default=0.0, metavar="AMOUNT",
+                   help="bulge the text like a fisheye lens (the 'curvy letters' effect): 0.2 soft, 0.35 strong")
     a = p.parse_args(rest)
     _need_media(a.video)
     import fonts
@@ -390,6 +450,13 @@ def cmd_text(rest):
         f"100,100,0,0,1,{a.outline},{a.shadow},8,{margin},{margin},0,1", "", "[Events]",
         "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
         f"Dialogue: 0,{t(a.start)},{t(end)},Text,,0,0,0,,{{\\an8\\pos(540,{a.y})}}{body}"]) + "\n", encoding="utf-8")
+    if a.fisheye > 0:
+        png = _warped_text(ass, ffile.parent if ffile else None, 1 + a.fisheye, Path(a.output))
+        rc = cmd_ff([str(x) for x in ["overlay", a.video, "--image", png, "--position", "center", "--scale", 1080,
+                                      "--margin", 0, "--start", a.start, "--end", end, "-o", a.output, "--overwrite"]])
+        if rc == 0:
+            print(f"text ({family}, fisheye {a.fisheye}) on {a.start:.1f}–{end:.1f} s → {a.output}")
+        return rc
     args = ["caption", a.video, "--ass", ass, "-o", a.output, "--overwrite"]
     if ffile:
         args += ["--fonts-dir", ffile.parent]
