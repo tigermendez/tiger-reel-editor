@@ -218,6 +218,11 @@ def main():
         reel("ff", "caption", d / "raw.mp4", "--ass", d / "font.ass", "--fonts-dir", ttf.parent, "-o",
              d / "font.mp4", "--overwrite")
         check((d / "font.mp4").exists(), "captions burn with a font file (no installed font needed)")
+        reel("text", d / "raw.mp4", "A *fixed* sentence", "-o", d / "text.mp4", "--font", ttf, "--color", "F8C300",
+             "--accent", "FFF8B5", "--y", "900")
+        ass = (d / "text.text.ass").read_text(encoding="utf-8")
+        check("Dialogue: 0,0:00:00.00," in ass and "&H00B5F8FF&" in ass and (d / "text.mp4").exists(),
+              "fixed text stays the whole clip, marked word in the accent colour")
     else:
         print("  --  font download skipped (no access to GitHub)")
 

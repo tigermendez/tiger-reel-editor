@@ -10,6 +10,7 @@
   reel.py fix <video> <out-prefix> --replace Club=Claude [--language es]  fix misheard words everywhere and re-time
   reel.py words <pieces.json> -o cut.words.json [--check heard.json] words of a cut made of pieces, from the takes
   reel.py captions <words.json> <out.ass> [--words 2] [--y 1150] [--y-at 20-60=1380]  captions that follow the voice
+  reel.py text <video> "a *fixed* sentence" -o out [--font --color --accent --y]   fixed text block, not captions
   reel.py silences <video> [--db -38] [--min 0.3]                    where the pauses are (start end length)
   reel.py face <video> [--texts captions.srt --band 1150-1250] [--json face.json]
                                                                      where the face is; does any text cover it?
@@ -343,6 +344,61 @@ def write_ass(a, timed, fix):
     Path(a.out).write_text("\n".join(head + lines) + "\n", encoding="utf-8")
 
 
+def cmd_text(rest):
+    p = argparse.ArgumentParser(prog="reel.py text", description=(
+        "A fixed block of text on the video (not captions): the same sentence on screen for the whole clip or a "
+        "stretch, wrapped on centred lines. Words between *asterisks* take the --accent colour. Burns it with "
+        "ffmpeg-skill, using a font file from fonts/ when given, so it looks the same on every computer."))
+    p.add_argument("video")
+    p.add_argument("text", help='e.g. "Te enseño a poner estas letras *curvas* porque nadie te dice cómo"')
+    p.add_argument("-o", "--output", required=True)
+    p.add_argument("--font", default="Arial", help="font file, family in ./fonts, or installed family")
+    p.add_argument("--size", type=int, default=72)
+    p.add_argument("--color", default="FFFFFF")
+    p.add_argument("--accent", default=None, help="colour for *marked* words")
+    p.add_argument("--y", type=int, default=700, help="top of the block in px on the 1080x1920 frame (700)")
+    p.add_argument("--wrap", type=int, default=760, help="line width in px (760)")
+    p.add_argument("--outline", type=float, default=0)
+    p.add_argument("--shadow", type=float, default=3)
+    p.add_argument("--start", type=float, default=0.0)
+    p.add_argument("--end", type=float, default=None, help="default: the end of the video")
+    a = p.parse_args(rest)
+    _need_media(a.video)
+    import fonts
+    ffile, fam = fonts.find(a.font)
+    family = fam if ffile else a.font
+    end = a.end if a.end is not None else _seconds(a.video)
+
+    def t(x):
+        cs = max(0, round(x * 100))
+        return f"{cs // 360000}:{cs // 6000 % 60:02}:{cs // 100 % 60:02}.{cs % 100:02}"
+
+    body = a.text.replace("\\", "").replace("{", "(").replace("}", ")")
+    if a.accent:
+        body = re.sub(r"\*([^*]+)\*", lambda m: f"{{\\c{ass_color(a.accent)}}}{m[1]}{{\\c{ass_color(a.color)}}}", body)
+    else:
+        body = body.replace("*", "")
+    margin = max(40, (1080 - a.wrap) // 2)
+    ass = Path(a.output).with_suffix(".text.ass")
+    ass.write_text("\n".join([
+        "[Script Info]", "ScriptType: v4.00+", "PlayResX: 1080", "PlayResY: 1920", "WrapStyle: 0",
+        "ScaledBorderAndShadow: yes", "", "[V4+ Styles]",
+        "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, "
+        "Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, "
+        "MarginR, MarginV, Encoding",
+        f"Style: Text,{family},{a.size},{ass_color(a.color)},{ass_color(a.color)},&H00000000&,&H80000000&,0,0,0,0,"
+        f"100,100,0,0,1,{a.outline},{a.shadow},8,{margin},{margin},0,1", "", "[Events]",
+        "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
+        f"Dialogue: 0,{t(a.start)},{t(end)},Text,,0,0,0,,{{\\an8\\pos(540,{a.y})}}{body}"]) + "\n", encoding="utf-8")
+    args = ["caption", a.video, "--ass", ass, "-o", a.output, "--overwrite"]
+    if ffile:
+        args += ["--fonts-dir", ffile.parent]
+    rc = cmd_ff([str(x) for x in args])
+    if rc == 0:
+        print(f"text ({family}) on {a.start:.1f}–{end:.1f} s → {a.output}")
+    return rc
+
+
 def cmd_silences(rest):
     p = argparse.ArgumentParser(prog="reel.py silences")
     p.add_argument("video")
@@ -655,7 +711,7 @@ def cmd_sfx(rest):
 
 
 COMMANDS = {"setup": cmd_setup, "doctor": cmd_doctor, "new": cmd_new, "transcribe": cmd_transcribe,
-            "align": cmd_align, "fix": cmd_fix, "words": cmd_words, "captions": cmd_captions, "silences": cmd_silences, "face": cmd_face,
+            "align": cmd_align, "fix": cmd_fix, "words": cmd_words, "captions": cmd_captions, "text": cmd_text, "silences": cmd_silences, "face": cmd_face,
             "review": cmd_review, "voice": cmd_voice, "ff": cmd_ff,
             "hf": cmd_hf, "overlaps": cmd_overlaps, "cutout": cmd_cutout, "font": cmd_font, "study": cmd_study, "level": cmd_level, "sfx": cmd_sfx}
 

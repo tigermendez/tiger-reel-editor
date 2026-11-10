@@ -57,7 +57,7 @@ works; recipes mix and bend, and anything not in a recipe you build anyway with 
 the project's `recipes/` when they name one. Fonts are files in `fonts/` (they bring the file, or
 `reel.py font "<Family>"` gets it from Google Fonts), so they look the same on every computer.
 Method: `references/learn-from-example.md`. Ready-made recipes to start from (copy into `recipes/`):
-`templates/recipe-serif-yellow.md` (trend: soft serif sentences in mustard yellow) and
+`templates/recipe-serif-yellow.md` (trend: one fixed sentence in a soft serif, mustard yellow) and
 `templates/recipe.example.md` (list to camera).
 
 **Long video → several reels** (a podcast, a live, a class): read the full transcript, propose the best moments
@@ -87,6 +87,8 @@ project per moment. Steps and cautions: `references/long-to-shorts.md`.
   voice recorder never match; make screen text readable (crop the part being read, at least 1.25x, then
   `ff fit --fit blur`); and build the cut's words with `reel.py words` from the takes, not by transcribing the
   cut (that can drop words or mishear numbers); `--check` with a transcript of the cut lists where to listen.
+- **Fixed text** (a hook or a sentence that stays on screen, not captions): `reel.py text <video> "a *marked*
+  word" -o <out> --font <file> --color --accent --y --start --end`.
 - **Captions:** first find where they fit: `reel.py face <cut video>` prints, per stretch, the height below the
   chin. Then `reel.py captions out/<clip>.words.json out/captions.ass --words 2 --y <that height>`
   (`--accent FFD400` colours the word being said; `--font` (a file in `fonts/` or a family), `--size`, `--upper`

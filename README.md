@@ -106,8 +106,8 @@ Everything it learns lives in plain files in your project, so you own it and can
 | `fonts/` | Your fonts as files (bring them, or Claude gets them from Google Fonts), so they look the same anywhere. |
 | `sounds/` + `sounds.txt` | Your sound effects and what each one is for. |
 
-It ships with two recipes to start from: **soft serif in mustard yellow** (the trending "curvy letters" caption
-look) and **list to camera**. Made a recipe that would help everyone? Open a pull request adding it to
+It ships with two recipes to start from: **soft serif in mustard yellow** (the trending "curvy letters" look: one
+fixed sentence on screen) and **list to camera**. Made a recipe that would help everyone? Open a pull request adding it to
 `skills/edit-reel/templates/`.
 
 ## Tools
@@ -115,7 +115,7 @@ look) and **list to camera**. Made a recipe that would help everyone? Open a pul
 All through one entry point: `python3 skills/edit-reel/scripts/reel.py <command>` (`python` on Windows).
 
 ```
-setup · doctor · new · study · transcribe · fix · align · words · captions · font · silences · face · sfx · level
+setup · doctor · new · study · transcribe · fix · align · words · captions · text · font · silences · face · sfx · level
 review · voice · overlaps · cutout
 ff <ffmpeg-skill tool> · hf <HyperFrames command>
 ```
