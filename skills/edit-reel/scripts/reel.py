@@ -251,7 +251,10 @@ def cmd_captions(rest):
                    "installed family (Arial). Files are the same on every computer: burn with --fonts-dir")
     g.add_argument("--color", default="FFFFFF", help="text colour, hex RRGGBB (FFFFFF)")
     g.add_argument("--accent", default=None, help="colour of the word being said, hex (e.g. FFD400); off by default")
-    g.add_argument("--outline", type=float, default=6, help="black outline in px (6)")
+    g.add_argument("--outline", type=float, default=6, help="black outline in px (6; 0 for none)")
+    g.add_argument("--shadow", type=float, default=2, help="soft drop shadow in px (2)")
+    g.add_argument("--wrap", type=int, default=0, metavar="PX",
+                   help="let a cue wrap onto several centred lines within this width (e.g. 900); 0 = one line")
     g.add_argument("--width", type=int, default=1080)
     g.add_argument("--height", type=int, default=1920)
     a = p.parse_args(rest)
@@ -298,6 +301,8 @@ def write_ass(a, timed, fix):
     captions off centre; an .ass with PlayResX/PlayResY = the video size puts them exactly where asked.
     With --accent, the word being said is drawn in that colour (one event per word, from its measured start).
     """
+    margin = max(40, (a.width - a.wrap) // 2) if a.wrap else 40
+
     def t(x):
         cs = max(0, round(x * 100))
         return f"{cs // 360000}:{cs // 6000 % 60:02}:{cs // 100 % 60:02}.{cs % 100:02}"
@@ -307,13 +312,13 @@ def write_ass(a, timed, fix):
 
     head = [
         "[Script Info]", "ScriptType: v4.00+", f"PlayResX: {a.width}", f"PlayResY: {a.height}",
-        "WrapStyle: 2", "ScaledBorderAndShadow: yes", "",
+        f"WrapStyle: {0 if a.wrap else 2}", "ScaledBorderAndShadow: yes", "",
         "[V4+ Styles]",
         "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, "
         "Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, "
         "MarginR, MarginV, Encoding",
         f"Style: Reel,{a.font},{a.size},{ass_color(a.color)},{ass_color(a.color)},&H00000000&,&H80000000&,-1,0,0,0,"
-        f"100,100,0,0,1,{a.outline},2,8,40,40,0,1", "",
+        f"100,100,0,0,1,{a.outline},{a.shadow},8,{margin},{margin},0,1", "",
         "[Events]", "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
     ]
     stretches = []
@@ -513,6 +518,7 @@ def cmd_font(rest):
             print(f"no fonts in {d}/ yet. Put font files there, or: reel.py font 'Family Name'")
         return 0
     got = fonts.download(a.name, a.dir)
+    got.sort(key=lambda f: (0 if "regular" in f.name.lower() else 1 if "italic" not in f.name.lower() else 2, f.name))
     fams = sorted({fonts.family_name(f) for f in got})
     print(f"{len(got)} file(s) in {got[0].parent}: family {', '.join(fams)}")
     print(f"captions: --font '{got[0]}'   graphics: @font-face {{ src: url('{got[0].as_posix()}') }}")

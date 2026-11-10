@@ -106,7 +106,9 @@ Everything it learns lives in plain files in your project, so you own it and can
 | `fonts/` | Your fonts as files (bring them, or Claude gets them from Google Fonts), so they look the same anywhere. |
 | `sounds/` + `sounds.txt` | Your sound effects and what each one is for. |
 
-Made a recipe that would help everyone? Open a pull request adding it to `skills/edit-reel/templates/`.
+It ships with two recipes to start from: **soft serif in mustard yellow** (the trending "curvy letters" caption
+look) and **list to camera**. Made a recipe that would help everyone? Open a pull request adding it to
+`skills/edit-reel/templates/`.
 
 ## Tools
 

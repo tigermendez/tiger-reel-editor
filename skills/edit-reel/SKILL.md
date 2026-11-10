@@ -56,7 +56,9 @@ look ("like X"), measure it (`reel.py study <video> -o study/<name>`), look at t
 works; recipes mix and bend, and anything not in a recipe you build anyway with HyperFrames or ffmpeg-skill. Read
 the project's `recipes/` when they name one. Fonts are files in `fonts/` (they bring the file, or
 `reel.py font "<Family>"` gets it from Google Fonts), so they look the same on every computer.
-Method: `references/learn-from-example.md`.
+Method: `references/learn-from-example.md`. Ready-made recipes to start from (copy into `recipes/`):
+`templates/recipe-serif-yellow.md` (trend: soft serif sentences in mustard yellow) and
+`templates/recipe.example.md` (list to camera).
 
 **Long video → several reels** (a podcast, a live, a class): read the full transcript, propose the best moments
 by what is said (hook, self-contained idea, 30–60 s, exact times from the words), let the person pick, then one
