@@ -31,6 +31,7 @@ Then open Claude Code in a folder with your video and say: *"Edit this clip into
 | **Final review** | 1080×1920, 30 fps, H.264/AAC, loudness, true peak, length — pass/fail, plus a contact sheet to look at | FFmpeg |
 | **Graphics** *(optional)* | Titles, list counters and cards timed to your words, checked so nothing covers your face; text behind your head | HyperFrames |
 | **Long video → reels** | Reads a whole podcast or live, proposes the best moments by what is said, you pick, each becomes a reel | Whisper |
+| **Effects by name** | "Zoom on this word", "freeze with a record scratch", "slow motion here", "before and after", "typewriter text", "curvy letters"… just say it | FFmpeg |
 | **Sound effects** | A starter set made from scratch (whoosh, pop, ding…), placed at exact times under your voice | FFmpeg |
 | **Your style** | A `style.md` in your words that Claude follows and grows every time you correct it twice | — |
 
@@ -115,7 +116,7 @@ fixed sentence on screen) and **list to camera**. Made a recipe that would help 
 All through one entry point: `python3 skills/edit-reel/scripts/reel.py <command>` (`python` on Windows).
 
 ```
-setup · doctor · new · study · transcribe · fix · align · words · captions · text · font · silences · face · sfx · level
+setup · doctor · new · study · transcribe · fix · align · words · captions · text · fx · font · silences · face · sfx · level
 review · voice · overlaps · cutout
 ff <ffmpeg-skill tool> · hf <HyperFrames command>
 ```

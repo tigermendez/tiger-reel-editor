@@ -32,7 +32,7 @@ jobs:
           python-version: "3.11"
 
       - name: Static checks
-        run: python -m py_compile skills/edit-reel/scripts/reel.py skills/edit-reel/scripts/_env.py skills/edit-reel/scripts/_setup.py skills/edit-reel/scripts/review.py skills/edit-reel/scripts/speech.py skills/edit-reel/scripts/face.py skills/edit-reel/scripts/voice.py skills/edit-reel/scripts/sfx.py tests/e2e.py tests/e2e_graphics.py && node --check skills/edit-reel/scripts/overlaps.mjs
+        run: python -m py_compile skills/edit-reel/scripts/reel.py skills/edit-reel/scripts/_env.py skills/edit-reel/scripts/_setup.py skills/edit-reel/scripts/review.py skills/edit-reel/scripts/speech.py skills/edit-reel/scripts/face.py skills/edit-reel/scripts/voice.py skills/edit-reel/scripts/sfx.py skills/edit-reel/scripts/fx.py skills/edit-reel/scripts/fonts.py tests/e2e.py tests/e2e_graphics.py && node --check skills/edit-reel/scripts/overlaps.mjs
 
       - name: Cache models
         uses: actions/cache@v6

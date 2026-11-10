@@ -19,6 +19,10 @@ STARTER = {
               "-f", "lavfi", "-i", "anoisesrc=d=1.5:c=white:a=0.3:r=48000", "-filter_complex",
               "[1:a]highpass=f=2000,afade=t=in:d=1.5:curve=tri[n];[0:a][n]amix=inputs=2:normalize=0,"
               "afade=t=out:st=1.42:d=0.08"],
+    "scratch": ["-f", "lavfi", "-i", "aevalsrc='0.6*sin(2*PI*(400+900*sin(2*PI*5*t))*t)*(1-t/0.45)':s=48000:d=0.45",
+                "-f", "lavfi", "-i", "anoisesrc=d=0.45:c=white:a=0.5:r=48000", "-filter_complex",
+                "[1:a]bandpass=f=1800:w=1200,afade=t=out:d=0.4[n];[0:a][n]amix=inputs=2:normalize=0,"
+                "afade=t=in:d=0.01,afade=t=out:st=0.38:d=0.07"],
     "impact": ["-f", "lavfi", "-i", "aevalsrc='0.9*sin(2*PI*(70-30*t)*t)*exp(-t*6)':s=48000:d=0.9",
                "-f", "lavfi", "-i", "anoisesrc=d=0.9:c=brown:a=0.8:r=48000", "-filter_complex",
                "[1:a]lowpass=f=400,afade=t=out:d=0.25:curve=exp[n];[0:a][n]amix=inputs=2:normalize=0"],
@@ -31,6 +35,7 @@ STARTER_DESC = {
     "ding": "bright two-note ding, 1.2 s — a result, a success, a check mark",
     "riser": "rising tone and air, 1.5 s — tension right before a reveal (ends on the reveal)",
     "impact": "low thump, 0.9 s — the punchline, a big number, a hard cut to the point",
+    "scratch": "record scratch, 0.45 s — 'wait, what?': a freeze frame, a twist, a sudden stop",
 }
 CATALOG = "sounds.txt"  # one 'name: what it sounds like — when to use it' per line, in each sounds folder
 

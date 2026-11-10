@@ -11,6 +11,7 @@
   reel.py words <pieces.json> -o cut.words.json [--check heard.json] words of a cut made of pieces, from the takes
   reel.py captions <words.json> <out.ass> [--words 2] [--y 1150] [--y-at 20-60=1380]  captions that follow the voice
   reel.py text <video> "a *fixed* sentence" -o out [--font --color --accent --y]   fixed text block, not captions
+  reel.py fx zoom|shake|freeze|speed|split ...                      named effects (catalogue: references/effects.md)
   reel.py silences <video> [--db -38] [--min 0.3]                    where the pauses are (start end length)
   reel.py face <video> [--texts captions.srt --band 1150-1250] [--json face.json]
                                                                      where the face is; does any text cover it?
@@ -423,6 +424,8 @@ def cmd_text(rest):
     p.add_argument("--shadow", type=float, default=3)
     p.add_argument("--start", type=float, default=0.0)
     p.add_argument("--end", type=float, default=None, help="default: the end of the video")
+    p.add_argument("--typewriter", type=float, default=0.0, metavar="SECONDS",
+                   help="type the text letter by letter over this many seconds, then keep it")
     p.add_argument("--fisheye", type=float, default=0.0, metavar="AMOUNT",
                    help="bulge the text like a fisheye lens (the 'curvy letters' effect): 0.15 soft, 0.25 strong")
     a = p.parse_args(rest)
@@ -436,12 +439,36 @@ def cmd_text(rest):
         cs = max(0, round(x * 100))
         return f"{cs // 360000}:{cs // 6000 % 60:02}:{cs // 100 % 60:02}.{cs % 100:02}"
 
-    body = a.text.replace("\\", "").replace("{", "(").replace("}", ")")
-    if a.accent:
-        body = re.sub(r"\*([^*]+)\*", lambda m: f"{{\\c{ass_color(a.accent)}}}{m[1]}{{\\c{ass_color(a.color)}}}", body)
-    else:
-        body = body.replace("*", "")
+    clean = a.text.replace("\\", "").replace("{", "(").replace("}", ")")
+    chars, marked = [], False  # each visible character with whether it is *marked*
+    for ch in clean:
+        if ch == "*":
+            marked = not marked
+        else:
+            chars.append((ch, marked and bool(a.accent)))
+
+    def render(shown):
+        """The text with the first `shown` characters visible and the rest invisible (layout never moves)."""
+        out, cur, hidden = [], False, False
+        for i, (ch, acc) in enumerate(chars):
+            if acc != cur:
+                out.append(f"{{\\c{ass_color(a.accent if acc else a.color)}}}")
+                cur = acc
+            if i == shown and not hidden:
+                out.append("{\\alpha&HFF&}")
+                hidden = True
+            out.append(ch)
+        return "".join(out)
     margin = max(40, (1080 - a.wrap) // 2)
+    pos = f"{{\\an8\\pos(540,{a.y})}}"
+    if a.typewriter > 0 and chars:
+        n = len(chars)
+        step = a.typewriter / n
+        dialogues = [f"Dialogue: 0,{t(a.start + i * step)},{t(a.start + (i + 1) * step)},Text,,0,0,0,,{pos}{render(i + 1)}"
+                     for i in range(n - 1)]
+        dialogues.append(f"Dialogue: 0,{t(a.start + (n - 1) * step)},{t(end)},Text,,0,0,0,,{pos}{render(n)}")
+    else:
+        dialogues = [f"Dialogue: 0,{t(a.start)},{t(end)},Text,,0,0,0,,{pos}{render(len(chars))}"]
     ass = Path(a.output).with_suffix(".text.ass")
     ass.write_text("\n".join([
         "[Script Info]", "ScriptType: v4.00+", "PlayResX: 1080", "PlayResY: 1920", "WrapStyle: 0",
@@ -452,7 +479,9 @@ def cmd_text(rest):
         f"Style: Text,{family},{a.size},{ass_color(a.color)},{ass_color(a.color)},&H00000000&,&H80000000&,0,0,0,0,"
         f"100,100,0,0,1,{a.outline},{a.shadow},8,{margin},{margin},0,1", "", "[Events]",
         "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
-        f"Dialogue: 0,{t(a.start)},{t(end)},Text,,0,0,0,,{{\\an8\\pos(540,{a.y})}}{body}"]) + "\n", encoding="utf-8")
+        *dialogues]) + "\n", encoding="utf-8")
+    if a.fisheye > 0 and a.typewriter > 0:
+        sys.exit("error: --fisheye and --typewriter cannot be combined yet (the bulge is drawn once, still)")
     if a.fisheye > 0:
         png = _warped_text(ass, ffile.parent if ffile else None, 1 + a.fisheye, Path(a.output))
         rc = cmd_ff([str(x) for x in ["overlay", a.video, "--image", png, "--position", "center", "--scale", 1080,
@@ -467,6 +496,11 @@ def cmd_text(rest):
     if rc == 0:
         print(f"text ({family}) on {a.start:.1f}–{end:.1f} s → {a.output}")
     return rc
+
+
+def cmd_fx(rest):
+    import fx
+    return fx.main(rest)
 
 
 def cmd_silences(rest):
@@ -781,7 +815,7 @@ def cmd_sfx(rest):
 
 
 COMMANDS = {"setup": cmd_setup, "doctor": cmd_doctor, "new": cmd_new, "transcribe": cmd_transcribe,
-            "align": cmd_align, "fix": cmd_fix, "words": cmd_words, "captions": cmd_captions, "text": cmd_text, "silences": cmd_silences, "face": cmd_face,
+            "align": cmd_align, "fix": cmd_fix, "words": cmd_words, "captions": cmd_captions, "text": cmd_text, "fx": cmd_fx, "silences": cmd_silences, "face": cmd_face,
             "review": cmd_review, "voice": cmd_voice, "ff": cmd_ff,
             "hf": cmd_hf, "overlaps": cmd_overlaps, "cutout": cmd_cutout, "font": cmd_font, "study": cmd_study, "level": cmd_level, "sfx": cmd_sfx}
 

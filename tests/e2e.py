@@ -230,6 +230,23 @@ def main():
     else:
         print("  --  font download skipped (no access to GitHub)")
 
+    # 7d. Effects by name.
+    reel("fx", "zoom", d / "raw.mp4", "-o", d / "fx_zoom.mp4", "--at", "1.0", "--dur", "1.0")
+    reel("fx", "shake", d / "raw.mp4", "-o", d / "fx_shake.mp4", "--at", "1.0")
+    reel("fx", "freeze", d / "raw.mp4", "-o", d / "fx_freeze.mp4", "--at", "1.0", "--hold", "1.0")
+    reel("fx", "speed", d / "raw.mp4", "-o", d / "fx_speed.mp4", "--at", "1.0", "--dur", "1.0", "--factor", "0.5")
+    base_len = seconds(d / "raw.mp4")
+    check(abs(seconds(d / "fx_freeze.mp4") - base_len - 1.0) < 0.2, "freeze adds its hold to the length")
+    check(abs(seconds(d / "fx_speed.mp4") - base_len - 1.0) < 0.25, "half speed for 1 s adds 1 s")
+    check(abs(seconds(d / "fx_zoom.mp4") - base_len) < 0.1 and (d / "fx_shake.mp4").exists(), "zoom and shake keep the length")
+    for name, colour in (("a.png", "red"), ("b.png", "blue")):
+        sh("ffmpeg", "-nostdin", "-v", "error", "-y", "-f", "lavfi", "-i", f"color=c={colour}:s=600x900", "-frames:v",
+           "1", d / name)
+    reel("fx", "split", d / "a.png", d / "b.png", "-o", d / "fx_split.mp4", "--dur", "2")
+    check(abs(seconds(d / "fx_split.mp4") - 2.0) < 0.1, "before/after from two images")
+    reel("text", d / "raw.mp4", "Typed text", "-o", d / "typed.mp4", "--typewriter", "1.0")
+    check((d / "typed.text.ass").read_text(encoding="utf-8").count("Dialogue:") >= 9, "typewriter reveals letter by letter")
+
     # 8. Clear errors instead of wrong answers.
     sh("ffmpeg", "-nostdin", "-v", "error", "-y", "-f", "lavfi", "-i", "color=c=black:s=720x1280:r=30:d=2",
        "-c:v", "libx264", "-pix_fmt", "yuv420p", d / "mute.mp4")
