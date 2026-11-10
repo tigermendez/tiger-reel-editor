@@ -24,10 +24,11 @@ Then open Claude Code in a folder with your video and say: *"Edit this clip into
 | Step | What happens | Built with |
 |---|---|---|
 | **Story first** | Transcribes your takes, proposes the story in one line and the hook, and waits for your OK before cutting | Whisper large-v3-turbo |
-| **Cuts** | Lists every pause, keeps repeated takes visible so *you* choose the good one | FFmpeg |
+| **Cuts** | Lists every pause, keeps repeated takes visible so *you* choose the good one, and points to the moments worth listening to (stumbles, half-said words) | FFmpeg · Whisper |
 | **Captions on every word** | Measures where each word is actually said (not where Whisper guesses), 1–2 words per caption. Fix a word, re-time in one command | WhisperX alignment |
 | **Face check** | Tells you from which height captions fit below your chin, and fails if any text covers your face or mouth | MediaPipe |
-| **Final review** | 1080×1920, 30 fps, H.264/AAC, −14 LUFS, true peak ≤ −1 dBTP, length — pass/fail, plus a contact sheet to look at | FFmpeg |
+| **Sound level** | The final mix to Instagram's −14 LUFS without distortion, even when camera and voice were recorded apart | FFmpeg |
+| **Final review** | 1080×1920, 30 fps, H.264/AAC, loudness, true peak, length — pass/fail, plus a contact sheet to look at | FFmpeg |
 | **Graphics** *(optional)* | Titles, list counters and cards timed to your words, checked so nothing covers your face; text behind your head | HyperFrames |
 | **Long video → reels** | Reads a whole podcast or live, proposes the best moments by what is said, you pick, each becomes a reel | Whisper |
 | **Sound effects** | A starter set made from scratch (whoosh, pop, ding…), placed at exact times under your voice | FFmpeg |
@@ -43,6 +44,7 @@ fixed version and hash-checked. This skill adds the editor's judgement on top.
 - **macOS** on Apple Silicon (M1 or newer) or **Windows 10/11** (x64).
 - **~10 GB free disk** and **8 GB RAM** (16 GB recommended).
 - **Internet the first time.** After that everything works offline.
+- Speed: on a 10-core Apple M4 a minute of footage transcribes in about 12 s.
 
 > **Download size:** the core module downloads about **3.5 GB** (mostly the Whisper speech model and Python
 > libraries). Claude tells you before downloading anything and asks before installing FFmpeg.
@@ -100,9 +102,13 @@ ff <ffmpeg-skill tool> · hf <HyperFrames command>
 
 ## Tested
 
-Every push runs the full flow on **macOS and Windows** in GitHub Actions: clean install of the core module, then a
-synthetic talking clip through transcribe → word timings → silences → captions → re-alignment → burned captions
-→ Reels export → face check → review. See [`tests/e2e.py`](tests/e2e.py).
+Every push runs the full flow on **macOS and Windows** in GitHub Actions, on clean machines: install the core and
+graphics modules from scratch, then a synthetic talking clip through transcription, word timings, the
+listen-to list, silences, captions (centred, per-shot heights), re-alignment after a fix, a cut made of pieces,
+burned captions, Reels export, loudness, sound effects, face check, graphics overlap check, a transparent graphics
+layer, cutout and the final review — plus the error cases (no sound, missing file). See [`tests/`](tests).
+It has also been used end to end on real reels (talking head with list graphics; camera + voice-over + screen
+recordings), compared side by side with versions edited by hand.
 
 ## Credits
 
