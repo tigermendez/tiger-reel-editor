@@ -64,8 +64,9 @@ Homebrew or winget: show the printed commands, get a yes, and rerun with `--yes`
   came from: transcribe the final cut (or shift the words) before making captions for it. Words are burned exactly
   as written: spelling is the person's to approve.
 - **Voice:** `ff audio --voice` for a quick clean; `reel.py voice` (module voice) for noisy rooms and echo.
-- **Loudness and export:** `ff export <video> --preset reels --normalize` (H.264/AAC 1080x1920 30 fps and -14 LUFS
-  in one call; without `--normalize` the loudness is left as it is). `tiktok` and `shorts` presets exist too.
+- **Export and loudness:** `ff export <video> --preset reels` (H.264/AAC 1080x1920 30 fps; `tiktok` and `shorts`
+  presets too), then `ff loudness <export> -I -14 --tp -1` for the exact level (export's own `--normalize` accepts
+  ±2 LU, the review asks for ±1).
   Versions: `out/<slug>_v1.mp4`, `_v2`... never overwrite an earlier version.
 - **Graphics** (titles, list counters, cards, calls to action): module `graphics` (HyperFrames). Build them as a
   transparent layer timed to the cut's words, check with `reel.py overlaps <dir> --face face.json` before

@@ -21,7 +21,7 @@ Remotion is a fine alternative if the person already uses React; the checks belo
 5. **Render the layer:** `reel.py hf render graphics --format webm -o out/overlay.webm --quiet` (VP9 with alpha;
    `--format mov` gives ProRes 4444, much larger).
 6. **Lay it over the cut:** `ff overlay <cut> --video out/overlay.webm --position center --scale 1080 --margin 0`,
-   then the usual `ff export --preset reels --normalize` and `reel.py review`.
+   then the usual `ff export --preset reels`, `ff loudness -I -14 --tp -1` and `reel.py review`.
 7. **Look** at frames where each element enters; check text size on a phone-sized view.
 
 ## Layout rules that work for vertical video

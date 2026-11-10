@@ -99,7 +99,7 @@ def main():
                          capture_output=True, check=True).stdout
     check(abs(raw[100] - raw[1800]) < 8 and raw[1800] > 30, f"background visible outside the graphics ({raw[1800]})")
     check(raw[380] != raw[100], "title drawn where it was placed")
-    sh(*reel, "ff", "export", d / "composed.mp4", "--preset", "reels", "--normalize", "-o", d / "final.mp4",
+    sh(*reel, "ff", "export", d / "composed.mp4", "--preset", "reels", "-o", d / "final.mp4",
        "--overwrite")
     rep = json.loads(sh(*reel, "review", d / "final.mp4", "--json", ok=(0, 1)).stdout)
     for c in rep["checks"]:
