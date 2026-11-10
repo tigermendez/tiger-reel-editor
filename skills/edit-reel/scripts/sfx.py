@@ -76,7 +76,9 @@ def listing(folders):
 
 
 def ff(*args, capture=False):
-    r = subprocess.run(["ffmpeg", "-nostdin", "-hide_banner", *map(str, args)], capture_output=True, text=True,
+    import shutil
+    exe = shutil.which("ffmpeg") or "ffmpeg"  # full path: Windows looks programs up in this process's PATH only
+    r = subprocess.run([exe, "-nostdin", "-hide_banner", *map(str, args)], capture_output=True, text=True,
                        encoding="utf-8", errors="replace")
     if r.returncode:
         sys.exit(f"error: ffmpeg failed: {r.stderr[-800:]}")

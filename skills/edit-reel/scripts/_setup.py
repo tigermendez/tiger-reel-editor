@@ -8,6 +8,7 @@ import base64
 import hashlib
 import io
 import json
+import os
 import platform
 import shutil
 import subprocess
@@ -169,6 +170,8 @@ def ensure_system(yes, want_node=False):
     for c in cmds:
         print("$ " + " ".join(c))
         E.run(c)
+    if cmds:  # winget/Homebrew just created new folders: let this process (and its children) find the programs
+        os.environ.update(E.env())
     found, libass, ver = ffmpeg_state()
     if not found:
         sys.exit("error: FFmpeg was installed but is not visible yet. Open a new terminal and run setup again.")
