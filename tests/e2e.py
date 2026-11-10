@@ -61,6 +61,15 @@ def seconds(path):
 
 
 def tts(text, out):
+    """Speech with no silence before or after it, so the test knows exactly where the pause it adds is."""
+    raw = out.with_name(out.stem + "_raw.wav")
+    _tts(text, raw)
+    trim = "silenceremove=start_periods=1:start_threshold=-45dB"
+    sh("ffmpeg", "-nostdin", "-v", "error", "-y", "-i", raw, "-af", f"{trim},areverse,{trim},areverse",
+       "-ar", "48000", "-ac", "1", out)
+
+
+def _tts(text, out):
     """Speech from the OS's own voice; CI machines may have none, so fall back to espeak-ng."""
     if E.IS_MAC and shutil.which("say"):
         sh("say", "-o", out.with_suffix(".aiff"), text, ok=(0, 1))
