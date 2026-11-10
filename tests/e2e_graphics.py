@@ -111,6 +111,9 @@ def main():
     alpha = sh("ffprobe", "-v", "error", "-show_entries", "stream_tags=alpha_mode", "-of", "csv=p=0",
                d / "person.webm").stdout.strip()
     check(alpha == "1", "cutout writes a transparent layer")
+    sh(*reel, "fx", "backdrop", d / "short.mp4", d / "a_bg.png" if (d / "a_bg.png").exists() else d / "clip.mp4",
+       "-o", d / "backdrop.mp4")
+    check((d / "backdrop.mp4").exists(), "green screen without a green screen (backdrop)")
     print(f"\nGRAPHICS END TO END OK  ({d})")
     if not keep:
         shutil.rmtree(d, ignore_errors=True)

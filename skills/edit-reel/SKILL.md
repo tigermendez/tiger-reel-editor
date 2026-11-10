@@ -87,8 +87,9 @@ project per moment. Steps and cautions: `references/long-to-shorts.md`.
   voice recorder never match; make screen text readable (crop the part being read, at least 1.25x, then
   `ff fit --fit blur`); and build the cut's words with `reel.py words` from the takes, not by transcribing the
   cut (that can drop words or mishear numbers); `--check` with a transcript of the cut lists where to listen.
-- **Effects by name:** zoom on a word, shake, freeze with a record scratch, slow motion, before/after,
-  typewriter, curvy letters, text behind the head… People ask in their own words ("congela con disco rayado");
+- **Effects by name:** zoom on a word, smooth zoom on a screen, face bubble, screen-on-top, green screen
+  without a green screen, progress bar, emoji pop, slow push-in, flash, B&W-to-colour, film look, shake, freeze
+  with a record scratch, slow motion, before/after, typewriter, curvy letters, text behind the head… People ask in their own words ("congela con disco rayado");
   match the request to `references/effects.md` (`reel.py fx …`), time it from the words, and keep it to one
   effect per idea. A new effect they show you gets built and added to the catalogue with its phrase.
 - **Fixed text** (a hook or a sentence that stays on screen, not captions): `reel.py text <video> "a *marked*

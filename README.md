@@ -31,7 +31,7 @@ Then open Claude Code in a folder with your video and say: *"Edit this clip into
 | **Final review** | 1080×1920, 30 fps, H.264/AAC, loudness, true peak, length — pass/fail, plus a contact sheet to look at | FFmpeg |
 | **Graphics** *(optional)* | Titles, list counters and cards timed to your words, checked so nothing covers your face; text behind your head | HyperFrames |
 | **Long video → reels** | Reads a whole podcast or live, proposes the best moments by what is said, you pick, each becomes a reel | Whisper |
-| **Effects by name** | "Zoom on this word", "freeze with a record scratch", "slow motion here", "before and after", "typewriter text", "curvy letters"… just say it | FFmpeg |
+| **Effects by name** | "Zoom on this word", "zoom into this part of the screen", "my face in a bubble", "put me in front of this page", "progress bar", "pop an emoji", "freeze with a record scratch", "slow motion here", "before and after", "typewriter text", "curvy letters"… just say it | FFmpeg |
 | **Sound effects** | A starter set made from scratch (whoosh, pop, ding…), placed at exact times under your voice | FFmpeg |
 | **Your style** | A `style.md` in your words that Claude follows and grows every time you correct it twice | — |
 

@@ -239,6 +239,18 @@ def main():
     check(abs(seconds(d / "fx_freeze.mp4") - base_len - 1.0) < 0.2, "freeze adds its hold to the length")
     check(abs(seconds(d / "fx_speed.mp4") - base_len - 1.0) < 0.25, "half speed for 1 s adds 1 s")
     check(abs(seconds(d / "fx_zoom.mp4") - base_len) < 0.1 and (d / "fx_shake.mp4").exists(), "zoom and shake keep the length")
+    for eff, extra in (("pushin", ["--at", "0", "--dur", "2"]), ("flash", ["--at", "1.0"]),
+                       ("reveal", ["--at", "1.0"]), ("progress", []), ("film", []),
+                       ("focus", ["--at", "0.5", "--dur", "2", "--box", "100,700,500,400"])):
+        reel("fx", eff, d / "raw.mp4", "-o", d / f"fx_{eff}.mp4", *extra)
+    check(all(abs(seconds(d / f"fx_{e}.mp4") - base_len) < 0.15 for e in ("pushin", "flash", "reveal", "progress",
+                                                                         "film", "focus")),
+          "push-in, flash, reveal, progress bar, film look and screen focus keep the length")
+    reel("fx", "stack", d / "raw.mp4", d / "raw.mp4", "-o", d / "fx_stack.mp4")
+    reel("fx", "bubble", d / "raw.mp4", d / "raw.mp4", "-o", d / "fx_bubble.mp4")
+    check((d / "fx_stack.mp4").exists() and (d / "fx_bubble.mp4").exists(), "screen-on-top and face bubble layouts")
+    r = reel("fx", "emoji", d / "raw.mp4", "-o", d / "fx_emoji.mp4", "--at", "1", "--emoji", "✅", ok=(0, 1))
+    print("  ok  emoji pop" if r.returncode == 0 else "  --  emoji skipped (no internet)")
     for name, colour in (("a.png", "red"), ("b.png", "blue")):
         sh("ffmpeg", "-nostdin", "-v", "error", "-y", "-f", "lavfi", "-i", f"color=c={colour}:s=600x900", "-frames:v",
            "1", d / name)
