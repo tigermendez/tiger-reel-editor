@@ -204,7 +204,7 @@ def cmd_silences(rest):
 def cmd_face(rest):
     if not E.FACE_MODEL.exists():
         sys.exit("error: face model missing. Run: reel.py setup")
-    return E.in_venv("face", "face.py", [E.FACE_MODEL, *rest])
+    return E.in_venv("face", "face.py", [E.FACE_MODEL, *rest], quiet=r"^(I\d{4} |W\d{4} |INFO: )")
 
 
 def cmd_review(rest):

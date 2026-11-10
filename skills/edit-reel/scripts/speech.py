@@ -77,14 +77,33 @@ def save_words(words, path):
         json.dump(words, f, ensure_ascii=False, indent=0)
 
 
+# Whisper invents these over silence or music (it learned them from subtitle credits on its training videos).
+HALLUCINATIONS = re.compile(
+    r"^(gracias por ver( el v[ií]deo)?|thanks? (you )?for watching|subt[ií]tulos (realizados )?por|amara\.org|"
+    r"suscr[ií]bete|please subscribe|thank you\.?|gracias\.?|obrigad[oa] por assistir)", re.I)
+
+
+def hallucination(seg):
+    """A phrase that is probably not speech: Whisper itself says so, or it is a known silence filler."""
+    text = seg.text.strip()
+    if seg.no_speech_prob > 0.6 and seg.avg_logprob < -0.8:
+        return True
+    long_for_its_words = (seg.end - seg.start) > 4 * max(1, len(text.split()))
+    return bool(HALLUCINATIONS.match(text)) and (long_for_its_words or seg.no_speech_prob > 0.3)
+
+
 def cmd_transcribe(a):
     from faster_whisper import WhisperModel
     with tempfile.TemporaryDirectory() as tmp:
         wav = to_wav(a.media, tmp)
-        model = WhisperModel(a.model, device="cpu", compute_type="int8")
+        model = WhisperModel(a.model, device="cpu", compute_type="int8", cpu_threads=os.cpu_count() or 4)
         segs, info = model.transcribe(wav, language=a.language, initial_prompt=a.names or None, beam_size=5,
                                       condition_on_previous_text=False, vad_filter=a.vad)
-        segments = [{"start": s.start, "end": s.end, "text": s.text.strip()} for s in segs if s.text.strip()]
+        segments, dropped = [], []
+        for s in segs:
+            if not s.text.strip():
+                continue
+            (dropped if hallucination(s) else segments).append({"start": s.start, "end": s.end, "text": s.text.strip()})
         language = a.language or info.language
         with open(a.out + ".txt", "w", encoding="utf-8") as f:
             f.write("\n".join(s["text"] for s in segments) + "\n")
@@ -92,6 +111,9 @@ def cmd_transcribe(a):
         words = align(wav, segments, language) if segments else []
     save_words(words, a.out + ".words.json")
     print(f"language: {language}  phrases: {len(segments)}  words: {len(words)}")
+    for x in dropped:
+        print(f"dropped as a likely Whisper hallucination ({x['start']:.1f}-{x['end']:.1f} s): {x['text']!r}"
+              " (if it was really said, add it back to the .srt and run align)")
     print(f"→ {a.out}.txt  {a.out}.srt  {a.out}.words.json")
 
 

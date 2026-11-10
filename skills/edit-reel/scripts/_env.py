@@ -53,6 +53,8 @@ def env():
     e.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
     e.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")  # progress bars flood the agent's context
     e.setdefault("TQDM_DISABLE", "1")
+    e.setdefault("GLOG_minloglevel", "2")  # MediaPipe / LiteRT start-up chatter
+    e.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")
     e["PYTHONIOENCODING"] = "utf-8"
     e["PYTHONUTF8"] = "1"
     return e
@@ -73,11 +75,21 @@ def need(tool, hint):
     return which(tool)
 
 
-def in_venv(name, script, args):
-    """Run one of our scripts inside a module's private Python environment."""
+def in_venv(name, script, args, quiet=None):
+    """Run one of our scripts inside a module's private Python environment.
+
+    quiet: a regex of stderr lines to drop (native libraries' start-up chatter that env vars cannot silence)."""
     py = venv_python(name)
     if not py.exists():
         module = {"core": "core", "face": "core", "voice": "voice"}.get(name, name)
         sys.exit(f"error: the '{module}' module is not installed.\n"
                  f"Run: python {SCRIPTS / 'reel.py'} setup --module {module}")
-    return run([py, "-I", SCRIPTS / script, *args], check=False).returncode
+    if not quiet:
+        return run([py, "-I", SCRIPTS / script, *args], check=False).returncode
+    import re
+    p = subprocess.Popen([str(c) for c in [py, "-I", SCRIPTS / script, *args]], env=env(), stderr=subprocess.PIPE,
+                         text=True, encoding="utf-8", errors="replace")
+    for line in p.stderr:
+        if not re.match(quiet, line):
+            sys.stderr.write(line)
+    return p.wait()

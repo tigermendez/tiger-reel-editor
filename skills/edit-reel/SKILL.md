@@ -41,8 +41,17 @@ Homebrew or winget: show the printed commands, get a yes, and rerun with `--yes`
 
 ## 2. Edit
 
-- Prefer one script per reel (`out/build.py` or a `render.py project.json` from ffmpeg-skill) so every correction
-  is one changed line and a new export, never a manual redo.
+- Prefer one script per reel (`out/build.py` writing a `render.py` project for ffmpeg-skill) so every correction
+  is one changed line and a new export, never a manual redo. Find each take by its words in `.words.json`
+  (the measured start of the first word and end of the last, plus ~0.1 s), not by eye. In the project set
+  `"transition": {"type": "none"}`: render's default is a 0.5 s fade, and talking reels use hard cuts.
+  Send render's long log to a file and read only the result.
+- **Choosing takes:** keep the last clean take of each line, but you cannot hear: Whisper writes what it expected,
+  not a stumble or a flat delivery. List the lines where takes differ or the transcript looks odd, and ask the
+  person to listen to those before you build.
+- **Framing:** look at a frame before cutting. Phone footage is often wider than a reel wants (legs, empty wall);
+  punch in to chest-up: render at 1.5x width (`"width": 1620`) and `ff crop` a 1080x1920 window around the face
+  (`reel.py face --json` gives its position) — sharper than upscaling a 1080 export.
 - **Cuts:** `reel.py silences <video>` lists pauses; repeated takes stay in the transcript on purpose — keep the
   last good take unless told otherwise. Cut with `ff cut --segments ...` or `ff silence ...`. A cut where the
   intonation keeps going sounds forced: suggest re-recording that line instead.
