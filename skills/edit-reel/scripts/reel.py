@@ -11,6 +11,7 @@
   reel.py silences <video> [--db -38] [--min 0.3]                    where the pauses are (start end length)
   reel.py face <video> [--texts captions.srt --band 1150-1250] [--json face.json]
                                                                      where the face is; does any text cover it?
+  reel.py level <video> -o <out>                                     final mix to -14 LUFS, peaks safe, no distortion
   reel.py review <video> [--platform reels|tiktok|shorts] [--sheet]  final technical check (exit 0 = passes)
   reel.py voice <video> <out.wav>                                    clean voice (module 'voice')
   reel.py ff <tool> [args...]                                        run an ffmpeg-skill tool (cut, silence, caption, loudness, export, check, look...)
@@ -264,10 +265,62 @@ def cmd_overlaps(rest):
                            *rest]).returncode
 
 
+def _ff(*args):
+    """Run one ffmpeg-skill tool quietly; stop with its message if it fails."""
+    d = E.FFMPEG_SKILL_DIR
+    py = E.venv_python("core") if E.venv_python("core").exists() else Path(sys.executable)
+    r = subprocess.run([str(py), str(d / "scripts" / f"{args[0]}.py"), *map(str, args[1:]), "--overwrite"],
+                       capture_output=True, text=True, encoding="utf-8", errors="replace")
+    if r.returncode:
+        sys.exit(f"error: ffmpeg-skill {args[0]} failed:\n{(r.stderr or r.stdout)[-1500:]}")
+
+
+def _loudness(path):
+    """(integrated LUFS, true peak dBTP) of the whole mix."""
+    r = subprocess.run(["ffmpeg", "-nostdin", "-hide_banner", "-nostats", "-i", str(path), "-vn", "-af",
+                        "ebur128=peak=true", "-f", "null", "-"], capture_output=True, text=True, encoding="utf-8",
+                       errors="replace")
+    tail = r.stderr.rsplit("Summary:", 1)[-1]
+    i = re.search(r"\bI:\s*([-\d.]+)\s+LUFS", tail)
+    tp = re.search(r"\bPeak:\s*([-\d.]+)\s+dBFS", tail)
+    if not i or not tp:
+        sys.exit(f"error: could not measure the loudness of {path}")
+    return float(i[1]), float(tp[1])
+
+
+def cmd_level(rest):
+    p = argparse.ArgumentParser(prog="reel.py level", description=(
+        "Bring the final mix to -14 LUFS without distortion. Measures it; if its peaks would not let it reach the "
+        "target (a peaky voice), a gentle compressor and a limiter shave them just enough; then a linear two-pass "
+        "loudness pass with headroom for the AAC encode; then measures the result. Exit 1 if it is still off."))
+    p.add_argument("video")
+    p.add_argument("-o", "--output", required=True)
+    p.add_argument("--target", type=float, default=-14.0, help="integrated loudness, LUFS (-14)")
+    p.add_argument("--tp", type=float, default=-1.5, help="true-peak ceiling before AAC, dBTP (-1.5)")
+    a = p.parse_args(rest)
+    src, out = Path(a.video), Path(a.output)
+    i, tp = _loudness(src)
+    print(f"before: {i:.1f} LUFS, peak {tp:.1f} dBTP")
+    room = a.tp - a.target  # how far above the average the peaks may sit
+    if tp - i > room:
+        ceiling = max(-24.0, round(i + room - 1.0, 1))
+        shaved = out.with_name(out.stem + ".shaved" + out.suffix)
+        print(f"peaks {tp - i:.1f} dB above the average (max {room:.1f}): compressor + limiter at {ceiling} dBFS")
+        _ff("audio", src, "--compress", "--limit", "--limit-ceiling", ceiling, "-o", shaved)
+        src = shaved
+    _ff("loudness", src, "-I", a.target, "--tp", a.tp, "-o", out)
+    if src != Path(a.video):
+        src.unlink(missing_ok=True)
+    i2, tp2 = _loudness(out)
+    good = abs(i2 - a.target) <= 1 and tp2 <= -1
+    print(f"after:  {i2:.1f} LUFS, peak {tp2:.1f} dBTP → {out}" + ("" if good else "  (still off: check the mix)"))
+    return 0 if good else 1
+
+
 COMMANDS = {"setup": cmd_setup, "doctor": cmd_doctor, "new": cmd_new, "transcribe": cmd_transcribe,
             "align": cmd_align, "captions": cmd_captions, "silences": cmd_silences, "face": cmd_face,
             "review": cmd_review, "voice": cmd_voice, "ff": cmd_ff,
-            "hf": cmd_hf, "overlaps": cmd_overlaps}
+            "hf": cmd_hf, "overlaps": cmd_overlaps, "level": cmd_level}
 
 
 def main():

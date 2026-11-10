@@ -65,10 +65,9 @@ Homebrew or winget: show the printed commands, get a yes, and rerun with `--yes`
   as written: spelling is the person's to approve.
 - **Voice:** `ff audio --voice` for a quick clean; `reel.py voice` (module voice) for noisy rooms and echo.
 - **Export and loudness:** `ff export <video> --preset reels` (H.264/AAC 1080x1920 30 fps; `tiktok` and `shorts`
-  presets too), then `ff audio <export> --compress` (a gentle compressor, standard for speech) and
-  `ff loudness <that> -I -14 --tp -1` for the exact level. Without the compressor a peaky voice stops short
-  (true peak already at -1, loudness still under -15): loudness works in linear mode and never distorts to get
-  there. Export's own `--normalize` accepts ±2 LU; the review asks for ±1.
+  presets too), then `reel.py level <export> -o out/<slug>_vN.mp4`: it measures the mix, shaves the peaks with a
+  gentle compressor + limiter only when they would stop it reaching -14 LUFS (a peaky voice), applies a linear
+  two-pass loudness with headroom for AAC, and measures again (exit 1 if still off).
   Versions: `out/<slug>_v1.mp4`, `_v2`... never overwrite an earlier version.
 - **Graphics** (titles, list counters, cards, calls to action): module `graphics` (HyperFrames). Build them as a
   transparent layer timed to the cut's words, check with `reel.py overlaps <dir> --face face.json` before
