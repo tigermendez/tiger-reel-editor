@@ -48,6 +48,10 @@ Homebrew or winget: show the printed commands, get a yes, and rerun with `--yes`
 4. If `style.md` exists in the project or their home folder, read it and follow it. If not, offer to start one
    from `templates/style.example.md`: their rules, written in their words, grow every time they correct you.
 
+**Long video → several reels** (a podcast, a live, a class): read the full transcript, propose the best moments
+by what is said (hook, self-contained idea, 30–60 s, exact times from the words), let the person pick, then one
+project per moment. Steps and cautions: `references/long-to-shorts.md`.
+
 ## 2. Edit
 
 - Prefer one script per reel (`out/build.py` writing a `render.py` project for ffmpeg-skill) so every correction

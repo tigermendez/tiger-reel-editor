@@ -29,6 +29,7 @@ Then open Claude Code in a folder with your video and say: *"Edit this clip into
 | **Face check** | Tells you from which height captions fit below your chin, and fails if any text covers your face or mouth | MediaPipe |
 | **Final review** | 1080×1920, 30 fps, H.264/AAC, −14 LUFS, true peak ≤ −1 dBTP, length — pass/fail, plus a contact sheet to look at | FFmpeg |
 | **Graphics** *(optional)* | Titles, list counters and cards timed to your words, checked so nothing covers your face; text behind your head | HyperFrames |
+| **Long video → reels** | Reads a whole podcast or live, proposes the best moments by what is said, you pick, each becomes a reel | Whisper |
 | **Sound effects** | A starter set made from scratch (whoosh, pop, ding…), placed at exact times under your voice | FFmpeg |
 | **Your style** | A `style.md` in your words that Claude follows and grows every time you correct it twice | — |
 
