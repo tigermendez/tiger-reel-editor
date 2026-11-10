@@ -31,10 +31,12 @@ pinned **ffmpeg-skill** through `reel.py ff <tool> ...`; read its routing table 
 ## 0. First time on this machine
 
 Run `reel.py doctor`. If the core module is not ready, tell the person in one sentence what will be installed and
-how much it downloads **before** installing (core: ~3.5 GB — FFmpeg, Whisper large-v3-turbo, word-timing models, face model), then run
+how much it downloads **before** installing (core: ~3.5 GB — FFmpeg, the speech model, word-timing and face
+models; it can take 10–40 minutes on a home connection), then run
 `reel.py setup --language <their languages>`. If it stops with exit code 3 it is asking to install FFmpeg/uv with
 Homebrew or winget: show the printed commands, get a yes, and rerun with `--yes`. Optional modules only when asked:
-`--module voice` (clean voice, ~1 GB) and `--module graphics` (HyperFrames + Chrome, ~0.6 GB, needs Node.js). Details and troubleshooting: `references/install.md`.
+`--module voice` (clean voice, ~1 GB) and `--module graphics` (HyperFrames + Chrome, ~0.6 GB, needs Node.js).
+Details and troubleshooting: `references/install.md`.
 
 ## 1. The story comes first (do not touch the footage yet)
 
@@ -78,15 +80,15 @@ project per moment. Steps and cautions: `references/long-to-shorts.md`.
 - **Captions:** first find where they fit: `reel.py face <cut video>` prints, per stretch, the height below the
   chin. Then `reel.py captions out/<clip>.words.json out/captions.ass --words 2 --y <that height>`
   (`--accent FFD400` colours the word being said; `--font`, `--size`, `--upper` from their style). Cues follow the
-  measured words. Burn with `ff caption <video> --ass out/captions.ass`. When the shot changes (camera, then a screen), give each stretch its own height with
-  `--y-at START-END=Y`: under the chin on camera, lower on screens so the text being read stays free.
-  Use the `.ass`, not an `.srt`: an `.srt`
-  burned on a vertical video can land off centre. If a word or name is wrong (Whisper often hears brand names
+  measured words. Burn with `ff caption <video> --ass out/captions.ass`. When the shot changes (camera, then a
+  screen), give each stretch its own height with `--y-at START-END=Y`: under the chin on camera, lower on screens
+  so the text being read stays free. Use the `.ass`, not an `.srt`: an `.srt` burned on a vertical video can land
+  off centre. If a word or name is wrong (Whisper often hears brand names
   as common words: "Claude" as "Club"), fix it everywhere and re-time in one step:
   `reel.py fix <media> <out-prefix> --replace Club=Claude --language <xx>`; for other edits change the phrase
   `.srt` and run `reel.py align`. Never fix timings by hand. Timings are relative to the clip they
-  came from: transcribe the final cut (or shift the words) before making captions for it. Words are burned exactly
-  as written: spelling is the person's to approve.
+  came from: for a cut made of pieces use `reel.py words`; for a single trimmed take, transcribe the trimmed clip.
+  Words are burned exactly as written: spelling is the person's to approve.
 - **Sound effects:** before the first edit, say it in two sentences, e.g. "I made you a basic set of effects
   (whoosh, pop, ding...). If you want more, I'll show you where to download them; just save them in the `sounds`
   folder." Details (why no library is included, the links) only if they ask: `references/sounds.md`.
@@ -103,8 +105,9 @@ project per moment. Steps and cautions: `references/long-to-shorts.md`.
   two-pass loudness with headroom for AAC, and measures again (exit 1 if still off).
   Versions: `out/<slug>_v1.mp4`, `_v2`... never overwrite an earlier version.
 - **Graphics** (titles, list counters, cards, calls to action): module `graphics` (HyperFrames). Build them as a
-  transparent layer timed to the cut's words, check with `reel.py overlaps <dir> --face face.json` before
-  rendering, render with `reel.py hf render`, lay over with `ff overlay`. Method and layout rules:
+  transparent layer timed to the cut's words, check with `reel.py overlaps <dir> --face face.json` and
+  `reel.py hf check <dir>` (text spilling out of its box) before rendering, render with `reel.py hf render`, lay
+  over with `ff overlay`. Method and layout rules:
   `references/graphics.md`. Text behind the head: `reel.py cutout` (same module), steps in that file.
 
 ## 3. Check before showing anything
@@ -113,9 +116,10 @@ project per moment. Steps and cautions: `references/long-to-shorts.md`.
    true peak ≤ -1 dBTP, length. Exit 1 means fix it first.
 2. `reel.py face out/<slug>_vN.mp4 --texts out/captions.ass` (or any `.srt` with `--band <y0>-<y1>`) — exit 1 means a text covers the
    face or the mouth. Without `--texts` it says, per stretch, from which height captions fit below the chin.
-3. **Look** at the sheet (`*.sheet.jpg`) and at a few frames yourself; listen to every cut.
-4. Report what passed with numbers, what you could not check, and the list `review` prints under
-   "Still yours to check". Rules for reviewing: `references/review.md`.
+3. **Look** at the sheet (`*.sheet.jpg`) and at the frames around every cut and every graphic yourself. You cannot
+   hear: ask the person to listen to the cuts, the effects and the moments on the listen list.
+4. Tell the person in plain words what is ready, what you could not check, and what is still theirs to check
+   (the list `review` prints). Numbers only if they ask. Rules for reviewing: `references/review.md`.
 
 ## Rules
 
