@@ -391,7 +391,10 @@ def _warped_text(ass, fontsdir, k, out):
     cx, cy = (cols[0] + cols[-1]) / 2, (rows[0] + rows[-1]) / 2
     R = max(cols[-1] - cols[0], rows[-1] - rows[0]) / 2 * 1.05
     rr = f"hypot((X-{cx})/{R}\\,(Y-{cy})/{R})"
-    scale = f"if(lt({rr}\\,1)\\,pow({rr}\\,{k - 1})\\,1)"
+    # A smooth barrel lens: pixels at distance r come from r*(1 - a*(1 - r^2)). The centre is magnified by
+    # 1/(1-a) and the effect fades to nothing at the edge of the block, so lines bend evenly instead of a bubble.
+    a_ = k - 1
+    scale = f"if(lt({rr}\\,1)\\,1-{a_}*(1-{rr}*{rr})\\,1)"
     sx, sy = f"{cx}+(X-{cx})*{scale}", f"{cy}+(Y-{cy})*{scale}"
     expr = {c: f"{c}({sx}\\,{sy})" for c in ("r", "g", "b", "alpha")}
     script = work / "warp.vf"
@@ -421,7 +424,7 @@ def cmd_text(rest):
     p.add_argument("--start", type=float, default=0.0)
     p.add_argument("--end", type=float, default=None, help="default: the end of the video")
     p.add_argument("--fisheye", type=float, default=0.0, metavar="AMOUNT",
-                   help="bulge the text like a fisheye lens (the 'curvy letters' effect): 0.2 soft, 0.35 strong")
+                   help="bulge the text like a fisheye lens (the 'curvy letters' effect): 0.15 soft, 0.25 strong")
     a = p.parse_args(rest)
     _need_media(a.video)
     import fonts

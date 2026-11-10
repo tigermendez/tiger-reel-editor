@@ -88,7 +88,7 @@ project per moment. Steps and cautions: `references/long-to-shorts.md`.
   `ff fit --fit blur`); and build the cut's words with `reel.py words` from the takes, not by transcribing the
   cut (that can drop words or mishear numbers); `--check` with a transcript of the cut lists where to listen.
 - **Fixed text** (a hook or a sentence that stays on screen, not captions): `reel.py text <video> "a *marked*
-  word" -o <out> --font <file> --color --accent --y --start --end`; `--fisheye 0.3` bulges it like a lens (the
+  word" -o <out> --font <file> --color --accent --y --start --end`; `--fisheye 0.25` bulges it like a lens (the
   "curvy letters" effect).
 - **Captions:** first find where they fit: `reel.py face <cut video>` prints, per stretch, the height below the
   chin. Then `reel.py captions out/<clip>.words.json out/captions.ass --words 2 --y <that height>`

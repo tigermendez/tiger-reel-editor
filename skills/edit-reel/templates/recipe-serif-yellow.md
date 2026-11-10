@@ -9,20 +9,20 @@ trending tutorial reel (the font there is Advercase).
 - The same text stays on screen the whole clip: one to three centred lines, usually the hook or a thought.
 - A tall, narrow serif with soft curves. **Advercase** is the original (a paid font: if the person has the file,
   put it in `fonts/`); **Instrument Serif** (free, Google Fonts) is the closest free match.
-- Mustard yellow **#F8C300**; a lighter yellow **#FFF8B5** for one or two marked words. The light one reads best
-  over darker parts of the picture.
+- **One colour** for the whole sentence: mustard yellow **#F8C300**. Over a dark picture, the lighter yellow
+  **#FFF8B5** can replace it (still one colour, not mixed).
 - The fisheye bulge: what makes the letters look curved. The text is flat; the lens effect bends it.
 - No black outline; a soft shadow so it still reads on bright backgrounds.
 
 ## What can change freely
-Size, height on screen, how strong the bulge is (0.2 soft – 0.35 strong), which words are light, line breaks.
+Size, height on screen, how strong the bulge is (0.15 soft – 0.25 like the trend), line breaks.
 
 ## How to build it here
 ```
 reel.py font "Instrument Serif"          # or put the Advercase file in fonts/
-reel.py text <clip> "Te enseño a poner estas letras *curvas* porque nadie te dice cómo" -o out/<slug>_v1.mp4 \
-  --font fonts/InstrumentSerif/InstrumentSerif-Regular.ttf --size 92 --color F8C300 --accent FFF8B5 \
-  --fisheye 0.3 --y <a free area: away from the face (reel.py face) and the app's bottom 20 %>
+reel.py text <clip> "Te enseño a poner estas letras curvas porque nadie te dice cómo" -o out/<slug>_v1.mp4 \
+  --font fonts/InstrumentSerif/InstrumentSerif-Regular.ttf --size 92 --color F8C300 --fisheye 0.25 \
+  --y <a free area: away from the face (reel.py face) and the app's bottom 20 %>
 ```
 Several sentences in a row: run `text` once per sentence with `--start` / `--end`. For titles or cards in the same
 look, use the same font file and colours in a graphics layer (`references/graphics.md`).
