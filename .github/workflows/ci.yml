@@ -1,11 +1,11 @@
 # Proves "works on macOS and Windows": installs the core module from scratch the way a user would, then pushes a
 # synthetic talking clip through the whole flow (tests/e2e.py). Models are cached between runs.
 name: end-to-end
-# While the repository is private (macOS minutes count 10x against the free quota) it runs only on demand:
-#   gh workflow run end-to-end
-# When it goes public, add back:  pull_request:  and  push: {branches: [main]}
 on:
   workflow_dispatch:
+  pull_request:
+  push:
+    branches: [main]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
