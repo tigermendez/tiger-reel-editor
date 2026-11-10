@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """edit-reel: one entry point for every tool. Standard library only; runs with Python 3.9+ on macOS and Windows.
 
-  reel.py setup [--module core|voice|all] [--language en,es] [--yes]   install what is missing (asks before system programs)
+  reel.py setup [--module core|voice|graphics|all] [--language en,es] [--yes]   install what is missing (asks before system programs)
   reel.py doctor                                                     what is installed
   reel.py new <slug> [--dir reels]                                   project folder: raw/ refs/ out/ plan.md
   reel.py transcribe <video> <out-prefix> [--language es] [--names "Claude, Ana"]
@@ -15,6 +15,8 @@
   reel.py voice <video> <out.wav>                                    clean voice (module 'voice')
   reel.py ff <tool> [args...]                                        run an ffmpeg-skill tool (cut, silence, caption, loudness, export, check, look...)
   reel.py ff                                                         where ffmpeg-skill's own SKILL.md is
+  reel.py hf <args...>                                               pinned HyperFrames CLI (module 'graphics'): init, render, lint...
+  reel.py overlaps <composition> [--face face.json]                  graphics that overlap each other or cover the face
 """
 import argparse
 import json
@@ -232,9 +234,33 @@ def cmd_ff(rest):
     return subprocess.run([str(py), str(script), *rest[1:]]).returncode
 
 
+def cmd_hf(rest):
+    """The pinned HyperFrames CLI (module graphics). Runs in the current folder, like `npx hyperframes`."""
+    if not (E.GRAPHICS / "node_modules" / "hyperframes").exists():
+        sys.exit("error: the 'graphics' module is not installed. Run: reel.py setup --module graphics")
+    return subprocess.run([*E.hyperframes_cmd(), *rest]).returncode
+
+
+def cmd_overlaps(rest):
+    if not (E.GRAPHICS / "node_modules" / "hyperframes").exists():
+        sys.exit("error: the 'graphics' module is not installed. Run: reel.py setup --module graphics")
+    if not rest or rest[0] in ("-h", "--help"):
+        print("usage: reel.py overlaps <composition dir|index.html> [--step 0.1] [--face face.json]\n"
+              "Lists elements that overlap on screen, and with --face (from `reel.py face <cut> --json`) the ones\n"
+              "that cover the face. Mark what to check with data-check=\"name\"; otherwise every visible text and image.")
+        return 0
+    chrome = subprocess.run([*E.hyperframes_cmd(), "browser", "path"], capture_output=True, text=True,
+                            cwd=E.GRAPHICS).stdout.strip().splitlines()[-1:]
+    if not chrome or not Path(chrome[0]).exists():
+        sys.exit("error: HyperFrames' Chrome is missing. Run: reel.py setup --module graphics")
+    return subprocess.run([E.which("node") or "node", str(E.SCRIPTS / "overlaps.mjs"), str(E.GRAPHICS), chrome[0],
+                           *rest]).returncode
+
+
 COMMANDS = {"setup": cmd_setup, "doctor": cmd_doctor, "new": cmd_new, "transcribe": cmd_transcribe,
             "align": cmd_align, "captions": cmd_captions, "silences": cmd_silences, "face": cmd_face,
-            "review": cmd_review, "voice": cmd_voice, "ff": cmd_ff}
+            "review": cmd_review, "voice": cmd_voice, "ff": cmd_ff,
+            "hf": cmd_hf, "overlaps": cmd_overlaps}
 
 
 def main():

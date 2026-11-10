@@ -32,7 +32,7 @@ jobs:
           python-version: "3.11"
 
       - name: Static checks
-        run: python -m py_compile skills/edit-reel/scripts/reel.py skills/edit-reel/scripts/_env.py skills/edit-reel/scripts/_setup.py skills/edit-reel/scripts/review.py skills/edit-reel/scripts/speech.py skills/edit-reel/scripts/face.py skills/edit-reel/scripts/voice.py tests/e2e.py
+        run: python -m py_compile skills/edit-reel/scripts/reel.py skills/edit-reel/scripts/_env.py skills/edit-reel/scripts/_setup.py skills/edit-reel/scripts/review.py skills/edit-reel/scripts/speech.py skills/edit-reel/scripts/face.py skills/edit-reel/scripts/voice.py tests/e2e.py tests/e2e_graphics.py && node --check skills/edit-reel/scripts/overlaps.mjs
 
       - name: Cache models
         uses: actions/cache@v6
@@ -58,6 +58,16 @@ jobs:
 
       - name: End to end
         run: python tests/e2e.py --keep ${{ runner.temp }}/e2e
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+
+      - name: Setup (graphics module)
+        run: python skills/edit-reel/scripts/reel.py setup --module graphics --yes
+
+      - name: Graphics end to end
+        run: python tests/e2e_graphics.py
 
       - name: Keep the result
         if: always()

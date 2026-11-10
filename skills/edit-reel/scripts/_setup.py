@@ -35,7 +35,14 @@ MODULES = {
         "size_gb": 1.0,
         "envs": {"voice": ["deepfilternet==0.5.6", "torch==2.5.1", "torchaudio==2.5.1", "numpy<2"]},
     },
+    "graphics": {
+        "about": "Animated titles, lists, cards and captions in HTML (HyperFrames by HeyGen) + overlap/face check",
+        "size_gb": 0.6,
+        "envs": {},
+        "npm": {"hyperframes": "0.9.27"},
+    },
 }
+NODE_MIN = 18
 
 FACE_MODEL_URL = ("https://storage.googleapis.com/mediapipe-models/face_detector/"
                   "blaze_face_short_range/float16/1/blaze_face_short_range.tflite")
@@ -62,10 +69,19 @@ def ffmpeg_state():
     return True, libass, (ver[0] if ver else "ffmpeg")
 
 
-def system_plan():
+def node_ok():
+    node = E.which("node")
+    if not node or not E.which("npm"):
+        return False
+    v = subprocess.run([node, "--version"], capture_output=True, text=True).stdout.strip().lstrip("v")
+    return int(v.split(".")[0] or 0) >= NODE_MIN
+
+
+def system_plan(want_node=False):
     """Commands that would install the missing system programs on this OS."""
     found, libass, _ = ffmpeg_state()
     cmds = []
+    need_node = want_node and not node_ok()
     if E.IS_MAC:
         if not E.which("brew"):
             return None, "Homebrew is needed first: https://brew.sh"
@@ -73,6 +89,8 @@ def system_plan():
             cmds.append(["brew", "install", "ffmpeg-full"])  # plain `ffmpeg` cannot burn captions (no libass)
         if not E.which("uv"):
             cmds.append(["brew", "install", "uv"])
+        if need_node:
+            cmds.append(["brew", "install", "node"])
     elif E.IS_WIN:
         if not E.which("winget"):
             return None, "winget is needed (App Installer from the Microsoft Store)."
@@ -81,6 +99,8 @@ def system_plan():
             cmds.append(["winget", "install", "--id", "Gyan.FFmpeg", *flags])  # full build, includes libass
         if not E.which("uv"):
             cmds.append(["winget", "install", "--id", "astral-sh.uv", *flags])
+        if need_node:
+            cmds.append(["winget", "install", "--id", "OpenJS.NodeJS.LTS", *flags])
     else:
         missing = [n for n, ok_ in (("ffmpeg (with libass)", found and libass), ("uv", E.which("uv"))) if not ok_]
         if missing:
@@ -89,8 +109,8 @@ def system_plan():
     return cmds, None
 
 
-def ensure_system(yes):
-    cmds, problem = system_plan()
+def ensure_system(yes, want_node=False):
+    cmds, problem = system_plan(want_node)
     if problem:
         sys.exit(f"error: {problem}")
     if cmds and not yes:
@@ -108,6 +128,10 @@ def ensure_system(yes):
     (ok if libass else bad)("FFmpeg can burn captions (libass)" if libass else
                             "this FFmpeg has no libass: burned-in captions will not work")
     ok(f"uv {subprocess.run([E.which('uv'), '--version'], capture_output=True, text=True).stdout.split()[1]}")
+    if want_node:
+        if not node_ok():
+            sys.exit(f"error: Node.js {NODE_MIN}+ was installed but is not visible yet. Open a new terminal and run setup again.")
+        ok(f"Node.js {subprocess.run([E.which('node'), '--version'], capture_output=True, text=True).stdout.strip()}")
 
 
 # ---------------------------------------------------------------- ffmpeg-skill (the hands)
@@ -182,6 +206,26 @@ def ensure_core_models(languages, model):
     ok("face model (BlazeFace, 0.2 MB)")
 
 
+def ensure_npm(packages):
+    """Pinned Node packages in <home>/graphics, plus the headless Chrome HyperFrames renders with."""
+    d = E.GRAPHICS
+    d.mkdir(parents=True, exist_ok=True)
+    pkg = {"name": "tiger-reel-editor-graphics", "private": True, "dependencies": packages}
+    marker = d / "package.json"
+    have = json.loads(marker.read_text()) if marker.exists() else {}
+    npm = E.which("npm")
+    if have.get("dependencies") != packages or not (d / "node_modules" / "hyperframes").exists():
+        print(f"  ..  {', '.join(f'{k}@{v}' for k, v in packages.items())} (npm)")
+        marker.write_text(json.dumps(pkg, indent=2))
+        E.run([npm, "install", "--no-fund", "--no-audit", "--loglevel", "error"], cwd=d, shell=E.IS_WIN)
+    ok(f"hyperframes {packages['hyperframes']}")
+    hf = E.hyperframes_cmd()
+    E.run([*hf, "telemetry", "disable"], cwd=d, stdout=subprocess.DEVNULL, check=False)
+    print("  ..  Chrome for rendering (~150 MB the first time)")
+    E.run([*hf, "browser", "ensure"], cwd=d, stdout=subprocess.DEVNULL)
+    ok("headless Chrome")
+
+
 def ensure_voice_model():
     if not py_in("voice", "from df.enhance import init_df; init_df(log_level='ERROR'); print('  ok  DeepFilterNet model')"):
         sys.exit("error: DeepFilterNet did not load.")
@@ -197,7 +241,7 @@ def setup(modules, yes=False, languages=("en",), model=None, ffmpeg_skill_from=N
     if free < need + 1:
         sys.exit("error: not enough free disk space.")
     print("System")
-    ensure_system(yes)
+    ensure_system(yes, want_node="graphics" in modules)
     for m in modules:
         print(f"Module '{m}': {MODULES[m]['about']}")
         if m == "core":
@@ -208,6 +252,8 @@ def setup(modules, yes=False, languages=("en",), model=None, ffmpeg_skill_from=N
             ensure_core_models(languages, model or E.WHISPER_MODEL)
         if m == "voice":
             ensure_voice_model()
+        if MODULES[m].get("npm"):
+            ensure_npm(MODULES[m]["npm"])
     print("Done. Check everything with: python " + str(E.SCRIPTS / "reel.py") + " doctor")
 
 
@@ -225,6 +271,8 @@ def doctor():
     core_ready &= has_skill
     for m, spec in MODULES.items():
         present = all(E.venv_python(n).exists() for n in spec["envs"])
+        if spec.get("npm"):
+            present = present and (E.GRAPHICS / "node_modules" / "hyperframes").exists()
         (ok if present else bad)(f"module '{m}'" + ("" if present else f"  (install: reel.py setup --module {m})"))
         if m == "core":
             core_ready &= present and E.FACE_MODEL.exists()

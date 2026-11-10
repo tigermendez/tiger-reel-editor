@@ -25,7 +25,7 @@ Run `reel.py doctor`. If the core module is not ready, tell the person what will
 **before** installing (core: ~3.5 GB — FFmpeg, Whisper large-v3-turbo, word-timing models, face model), then run
 `reel.py setup --language <their languages>`. If it stops with exit code 3 it is asking to install FFmpeg/uv with
 Homebrew or winget: show the printed commands, get a yes, and rerun with `--yes`. Optional modules only when asked:
-`--module voice` (clean voice, ~1 GB). Details and troubleshooting: `references/install.md`.
+`--module voice` (clean voice, ~1 GB) and `--module graphics` (HyperFrames + Chrome, ~0.6 GB, needs Node.js). Details and troubleshooting: `references/install.md`.
 
 ## 1. The story comes first (do not touch the footage yet)
 
@@ -67,8 +67,10 @@ Homebrew or winget: show the printed commands, get a yes, and rerun with `--yes`
 - **Loudness and export:** `ff export <video> --preset reels --normalize` (H.264/AAC 1080x1920 30 fps and -14 LUFS
   in one call; without `--normalize` the loudness is left as it is). `tiktok` and `shorts` presets exist too.
   Versions: `out/<slug>_v1.mp4`, `_v2`... never overwrite an earlier version.
-- **Graphics** (titles, animated captions, cards) are not part of this skill. Recommend the official
-  HyperFrames or Remotion skills when asked: `references/graphics.md`. Sound effects: `references/sounds.md`.
+- **Graphics** (titles, list counters, cards, calls to action): module `graphics` (HyperFrames). Build them as a
+  transparent layer timed to the cut's words, check with `reel.py overlaps <dir> --face face.json` before
+  rendering, render with `reel.py hf render`, lay over with `ff overlay`. Method and layout rules:
+  `references/graphics.md`. Sound effects: `references/sounds.md`.
 
 ## 3. Check before showing anything
 

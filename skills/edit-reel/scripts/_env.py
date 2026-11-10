@@ -24,6 +24,12 @@ FFMPEG_SKILL_DIR = HOME / "ffmpeg-skill" / FFMPEG_SKILL_VERSION
 # Default speech model: Whisper large-v3-turbo converted for faster-whisper (~1.6 GB).
 WHISPER_MODEL = os.environ.get("TIGER_REEL_EDITOR_WHISPER_MODEL", "large-v3-turbo")
 FACE_MODEL = MODELS / "blaze_face_short_range.tflite"
+GRAPHICS = HOME / "graphics"  # module 'graphics': pinned HyperFrames and its node_modules
+
+
+def hyperframes_cmd():
+    """The pinned HyperFrames CLI, run with Node (no global install, no npx resolution surprises)."""
+    return [which("node") or "node", str(GRAPHICS / "node_modules" / "hyperframes" / "bin" / "hyperframes.mjs")]
 
 
 def venv_python(name):

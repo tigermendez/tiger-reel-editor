@@ -10,10 +10,12 @@ them with `brew uninstall ffmpeg-full uv` or `winget uninstall Gyan.FFmpeg astra
 |---|---|---|
 | core | ffmpeg-skill 3.2.3 (pinned, hash-checked), Whisper large-v3-turbo, WhisperX word timings (~360 MB per language), MediaPipe face model | ~3.5 GB |
 | voice | DeepFilterNet: removes noise and echo | ~1 GB |
+| graphics | HyperFrames 0.9.27 (pinned) + its headless Chrome; Node.js 18+ (Homebrew `node` / winget `OpenJS.NodeJS.LTS`) | ~0.6 GB |
 
 ```
 reel.py setup --language en,es            # core, word timings for English and Spanish
 reel.py setup --module voice              # add clean voice later
+reel.py setup --module graphics           # add animated graphics (HyperFrames)
 reel.py setup --yes                       # also allow installing FFmpeg/uv with Homebrew or winget
 reel.py doctor                            # what is installed
 ```

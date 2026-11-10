@@ -28,6 +28,7 @@ Then open Claude Code in a folder with your video and say: *"Edit this clip into
 | **Captions on every word** | Measures where each word is actually said (not where Whisper guesses), 1–2 words per caption. Fix a word, re-time in one command | WhisperX alignment |
 | **Face check** | Tells you from which height captions fit below your chin, and fails if any text covers your face or mouth | MediaPipe |
 | **Final review** | 1080×1920, 30 fps, H.264/AAC, −14 LUFS, true peak ≤ −1 dBTP, length — pass/fail, plus a contact sheet to look at | FFmpeg |
+| **Graphics** *(optional)* | Titles, list counters and cards timed to your words, checked so nothing covers your face | HyperFrames |
 | **Your style** | A `style.md` in your words that Claude follows and grows every time you correct it twice | — |
 
 The hands — cutting, burning captions, loudness, exporting — come from
@@ -65,6 +66,7 @@ The first time you ask for an edit, Claude checks your machine and installs what
 |---|---|---|
 | **core** | FFmpeg (Homebrew / winget), ffmpeg-skill, Whisper, word-exact captions, silences, face check, review | ~3.5 GB |
 | **voice** *(optional)* | Removes background noise and room echo (DeepFilterNet) | ~1 GB |
+| **graphics** *(optional)* | Animated titles, lists and cards with HyperFrames, plus an overlap/face check (needs Node.js) | ~0.6 GB |
 
 Everything goes into one folder, `~/.tiger-reel-editor`. To uninstall, delete it.
 Manual install and troubleshooting: [`references/install.md`](skills/edit-reel/references/install.md).
@@ -78,9 +80,9 @@ Manual install and troubleshooting: [`references/install.md`](skills/edit-reel/r
 4. It runs the review and the face check, shows you the contact sheet, and lists what is still yours to check.
 5. You say what to change. Each change is a new version; nothing is overwritten.
 
-Graphics (animated titles, cards, counters) are not included on purpose: use the official
-[HyperFrames](https://hyperframes.heygen.com) or [Remotion](https://github.com/remotion-dev/skills) skills. Sound
-effects are not included either (most free libraries do not allow redistribution) —
+Want animated titles, list counters or a call-to-action card? Add the **graphics** module: it installs a pinned
+[HyperFrames](https://hyperframes.heygen.com) (by HeyGen) and checks that no graphic overlaps another or covers
+your face before rendering. Sound effects are not included (most free libraries do not allow redistribution) —
 [where to get them](skills/edit-reel/references/sounds.md).
 
 ## Tools
@@ -88,7 +90,8 @@ effects are not included either (most free libraries do not allow redistribution
 All through one entry point: `python3 skills/edit-reel/scripts/reel.py <command>` (`python` on Windows).
 
 ```
-setup · doctor · new · transcribe · align · captions · silences · face · review · voice · ff <ffmpeg-skill tool>
+setup · doctor · new · transcribe · align · captions · silences · face · review · voice · overlaps
+ff <ffmpeg-skill tool> · hf <HyperFrames command>
 ```
 
 ## Tested
@@ -105,5 +108,5 @@ use it. Follow along on Instagram [@tigermendez_](https://instagram.com/tigermen
 
 Built on [ffmpeg-skill](https://github.com/kajisho5/ffmpeg-skill), [FFmpeg](https://ffmpeg.org),
 [faster-whisper](https://github.com/SYSTRAN/faster-whisper), [WhisperX](https://github.com/m-bain/whisperX),
-[MediaPipe](https://github.com/google-ai-edge/mediapipe) and [DeepFilterNet](https://github.com/Rikorose/DeepFilterNet).
+[MediaPipe](https://github.com/google-ai-edge/mediapipe), [HyperFrames](https://github.com/heygen-com/hyperframes) and [DeepFilterNet](https://github.com/Rikorose/DeepFilterNet).
 Licences: [`NOTICE.md`](NOTICE.md). This project: MIT.
