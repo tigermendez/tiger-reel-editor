@@ -166,6 +166,25 @@ def main():
     cols = [x for x in range(108) if any(px[y * 108 + x] > 120 for y in range(11) if y * 108 + x < len(px))]
     centre = (cols[0] + cols[-1]) / 2 if cols else -1
     check(cols and abs(centre - 54) <= 6, f"caption centred at the asked height (centre column {centre} of 108)")
+    # 6b. Captions can change height per shot.
+    reel("captions", d / "fixed.words.json", d / "two.ass", "--y", "900", "--y-at", f"{a_len + 0.5:.2f}-99=1400")
+    two = (d / "two.ass").read_text(encoding="utf-8")
+    check("\\pos(540,900)" in two and "\\pos(540,1400)" in two, "captions change height per stretch (--y-at)")
+
+    # 6c. Words of a cut made of pieces come from the takes, shifted by each piece's real length.
+    words_all = json.loads((d / "fixed.words.json").read_text(encoding="utf-8"))
+    b_start = next(w["start"] for w in words_all if w["start"] > a_len + 0.5)
+    reel("ff", "cut", d / "raw.mp4", "--start", f"{b_start - 0.08:.2f}", "--accurate", "-o", d / "pb.mp4", "--overwrite")
+    reel("ff", "cut", d / "raw.mp4", "--end", f"{a_len + 0.1:.2f}", "--accurate", "-o", d / "pa.mp4", "--overwrite")
+    (d / "pieces.json").write_text(json.dumps([
+        {"words": "fixed.words.json", "from": b_start - 0.08, "to": 99, "file": "pb.mp4"},
+        {"words": "fixed.words.json", "from": 0, "to": a_len + 0.1, "file": "pa.mp4"}]), encoding="utf-8")
+    reel("words", d / "pieces.json", "-o", d / "swapped.words.json")
+    sw = json.loads((d / "swapped.words.json").read_text(encoding="utf-8"))
+    check(sw and sw[0]["w"].lower().startswith("caption") and sw[0]["start"] < 0.3,
+          f"pieces put line B first ({sw[0]['w'] if sw else '-'} at {sw[0]['start'] if sw else '-'} s)")
+    check(any(w["w"].lower().startswith("hello") and w["start"] > 1.5 for w in sw), "and line A after it")
+
     # 7. Sound effects: the starter set exists and an effect lands at its time (silence before, sound at 1.0 s).
     listed = reel("sfx", "--list").stdout
     check(all(n in listed for n in ("whoosh", "pop", "ding")), "starter sound effects are available")
