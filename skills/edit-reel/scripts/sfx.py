@@ -123,12 +123,15 @@ def find_sound(name, folders):
 
 def parse_cue(text):
     """'3.2 whoosh', '3.2 whoosh -6' or '0:03.2 sounds/pop.mp3 -4' → (seconds, name, dB)."""
+    text = re.sub(r"(?<=\d),(?=\d)", ".", text)  # "3,2 whoosh" (comma decimals) = 3.2 s
     parts = text.replace(",", " ").split()
     if len(parts) < 2:
-        sys.exit(f"error: a cue needs a time and a sound: {text!r}")
-    t = parts[0]
-    sec = sum(float(x) * m for x, m in zip(reversed(t.split(":")), (1, 60, 3600)))
-    db = float(parts[2]) if len(parts) > 2 else 0.0
+        sys.exit(f"error: a cue needs a time and a sound, like '3.2 whoosh': {text!r}")
+    try:
+        sec = sum(float(x) * m for x, m in zip(reversed(parts[0].split(":")), (1, 60, 3600)))
+        db = float(parts[2]) if len(parts) > 2 else 0.0
+    except ValueError:
+        sys.exit(f"error: could not read this cue (time sound [dB]): {text!r}")
     return sec, parts[1], db
 
 

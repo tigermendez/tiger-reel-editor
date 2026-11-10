@@ -93,7 +93,8 @@ redistribution); you get a starter set of effects made from scratch, and
 All through one entry point: `python3 skills/edit-reel/scripts/reel.py <command>` (`python` on Windows).
 
 ```
-setup · doctor · new · transcribe · align · captions · silences · face · sfx · level · review · voice · overlaps · cutout
+setup · doctor · new · transcribe · fix · align · words · captions · silences · face · sfx · level · review · voice
+overlaps · cutout
 ff <ffmpeg-skill tool> · hf <HyperFrames command>
 ```
 

@@ -1,0 +1,7 @@
+{
+  "name": "tiger-reel-editor-graphics",
+  "private": true,
+  "dependencies": {
+    "hyperframes": "0.9.27"
+  }
+}

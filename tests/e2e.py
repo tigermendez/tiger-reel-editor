@@ -202,6 +202,28 @@ def main():
         return float(m[1]) if m else -120.0
     quiet, hit = peak(0, 0.8), peak(0.98, 0.25)
     check(quiet < -60 and hit > -30, f"effect placed at 1.0 s (before: {quiet} dB, at the cue: {hit} dB)")
+    # 8. Clear errors instead of wrong answers.
+    sh("ffmpeg", "-nostdin", "-v", "error", "-y", "-f", "lavfi", "-i", "color=c=black:s=720x1280:r=30:d=2",
+       "-c:v", "libx264", "-pix_fmt", "yuv420p", d / "mute.mp4")
+    r = reel("silences", d / "mute.mp4", ok=(1,))
+    check("no sound track" in (r.stdout + r.stderr), "silences on a video with no sound says so (not '0 pauses')")
+    r = reel("silences", d / "missing.mp4", ok=(1,))
+    check("not found" in (r.stdout + r.stderr), "silences on a missing file says so")
+    r = reel("transcribe", d / "mute.mp4", d / "mute", ok=(1,))
+    check("no sound track" in (r.stdout + r.stderr), "transcribe on a video with no sound says so")
+    r = reel("face", d / "mute.mp4", "--step", "1")
+    check("1080x1920" in r.stdout, "face measures a 720x1280 video on the 1080x1920 canvas")
+    srt_before = (d / "fixed.srt").read_text(encoding="utf-8")
+    r = reel("fix", d / "raw.mp4", d / "fixed", "--replace", "editor=Editor", ok=(1,))
+    check("--language" in (r.stdout + r.stderr), "fix asks for the language when no transcript metadata exists")
+    reel("fix", d / "raw.mp4", d / "fixed", "--replace", "1=one", "--replace", "editor=Editor", "--language", "en")
+    srt_after = (d / "fixed.srt").read_text(encoding="utf-8")
+    check(srt_after.splitlines()[0] == srt_before.splitlines()[0] and "-->" in srt_after.splitlines()[1],
+          "fix leaves cue numbers and times alone")
+    check("Editor" in srt_after, "fix replaced the word and re-aligned")
+    check(json.loads((d / "raw.meta.json").read_text())["language"] == "en", "transcribe saved the detected language")
+    reel("sfx", d / "silent.mp4", "-o", d / "sfx2.mp4", "--at", "1,0 pop")
+    check(peak(0.98, 0.25) > -30, "a comma decimal time ('1,0 pop') works")
     print(f"\nEND TO END OK  ({d})")
     if not keep:
         shutil.rmtree(d, ignore_errors=True)

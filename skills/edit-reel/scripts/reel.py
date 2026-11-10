@@ -47,7 +47,7 @@ os.environ.update(E.env())  # FFmpeg from ffmpeg-full / winget is visible to eve
 def cmd_setup(rest):
     import _setup
     p = argparse.ArgumentParser(prog="reel.py setup")
-    p.add_argument("--module", default="core", help="core (default), voice, or all; several with commas")
+    p.add_argument("--module", default="core", help="core (default), voice, graphics, or all; several with commas")
     p.add_argument("--language", default="en", help="languages to prepare word timings for, e.g. en,es")
     p.add_argument("--model", default=None, help="speech model (default large-v3-turbo; 'small' for a quick test)")
     p.add_argument("--yes", action="store_true", help="allow installing FFmpeg/uv with Homebrew or winget")
@@ -56,8 +56,9 @@ def cmd_setup(rest):
     mods = list(_setup.MODULES) if a.module == "all" else [m.strip() for m in a.module.split(",")]
     for m in mods:
         if m not in _setup.MODULES:
-            sys.exit(f"error: unknown module '{m}' (core, voice, all)")
+            sys.exit(f"error: unknown module '{m}' (core, voice, graphics, all)")
     if "core" not in mods and not E.venv_python("core").exists():
+        print(f"The core module (~{_setup.MODULES['core']['size_gb']} GB) is required first and will be installed too.")
         mods.insert(0, "core")
     _setup.setup(mods, a.yes, [x.strip() for x in a.language.split(",") if x.strip()], a.model, a.ffmpeg_skill_from)
     return 0
@@ -85,52 +86,97 @@ def cmd_new(rest):
 
 
 def cmd_transcribe(rest):
+    if rest and not rest[0].startswith("-"):
+        _need_media(rest[0], audio=True)
     return E.in_venv("core", "speech.py", ["transcribe", *rest])
 
 
 def cmd_align(rest):
+    if "--language" not in rest and len(rest) >= 2:
+        srt = rest[1]
+        rest = [*rest, "--language", _language(srt[:-4] if srt.endswith(".srt") else srt, None)]
+    if rest:
+        _need_media(rest[0], audio=True)
     return E.in_venv("core", "speech.py", ["align", *rest])
 
 
 def cmd_fix(rest):
     p = argparse.ArgumentParser(prog="reel.py fix", description=(
-        "Fix misheard words in a transcript and re-time it: replaces whole words in <prefix>.srt and <prefix>.txt "
-        "(case-insensitive) and re-aligns <prefix>.words.json on the audio. Example: "
-        "reel.py fix raw/take.mp4 out/take --replace Club=Claude --replace 'Cloud=Claude' --language es"))
+        "Fix misheard words in a transcript and re-time it: replaces whole words in the text of <prefix>.srt and "
+        "<prefix>.txt (case-insensitive; cue numbers and times are left alone) and re-aligns <prefix>.words.json on "
+        "the audio. Example: reel.py fix raw/take.mp4 out/take --replace Club=Claude --replace Cloud=Claude"))
     p.add_argument("media")
     p.add_argument("prefix", help="what transcribe wrote: <prefix>.srt, .txt, .words.json")
     p.add_argument("--replace", action="append", required=True, metavar="WRONG=RIGHT")
-    p.add_argument("--language", default="en")
+    p.add_argument("--language", default=None, help="default: the language transcribe detected")
     a = p.parse_args(rest)
+    srt = Path(a.prefix + ".srt")
+    if not srt.is_file():
+        sys.exit(f"error: {srt} not found (the prefix is what you gave transcribe as its output)")
+    _need_media(a.media, audio=True)
+    language = _language(a.prefix, a.language)  # before touching anything
     pairs = []
     for r in a.replace:
-        if "=" not in r:
-            p.error(f"--replace needs WRONG=RIGHT, got {r!r}")
-        wrong, right = (x.strip() for x in r.split("=", 1))
+        wrong, _, right = r.partition("=")
+        wrong, right = wrong.strip(), right.strip()
+        if not wrong or "=" not in r:
+            p.error(f"--replace needs WRONG=RIGHT with a word on the left, got {r!r}")
         pairs.append((re.compile(rf"(?<!\w){re.escape(wrong)}(?!\w)", re.I), right, wrong))
-    total = 0
-    for ext in (".srt", ".txt"):
-        f = Path(a.prefix + ext)
-        if not f.exists():
-            continue
-        text = f.read_text(encoding="utf-8")
-        for rx, right, wrong in pairs:
-            text, n = rx.subn(right, text)
-            if ext == ".srt":
-                total += n
-                print(f"  {wrong} → {right}: {n}")
-        f.write_text(text, encoding="utf-8")
-    if not total:
+
+    def sub_text(line, counts):
+        for k, (rx, right, _) in enumerate(pairs):
+            line, n = rx.subn(right, line)
+            counts[k] += n
+        return line
+
+    counts = [0] * len(pairs)
+    out = []
+    for line in srt.read_text(encoding="utf-8-sig").splitlines():
+        timing = "-->" in line or line.strip().isdigit() or not line.strip()
+        out.append(line if timing else sub_text(line, counts))
+    srt.write_text("\n".join(out) + "\n", encoding="utf-8")
+    txt = Path(a.prefix + ".txt")
+    if txt.exists():
+        txt.write_text(sub_text(txt.read_text(encoding="utf-8"), [0] * len(pairs)), encoding="utf-8")
+    for (_, right, wrong), n in zip(pairs, counts):
+        print(f"  {wrong} → {right}: {n}")
+    if not sum(counts):
         print("nothing to replace in the .srt")
         return 0
-    return E.in_venv("core", "speech.py", ["align", a.media, a.prefix + ".srt", a.prefix + ".words.json",
-                                           "--language", a.language])
+    return E.in_venv("core", "speech.py", ["align", a.media, str(srt), a.prefix + ".words.json",
+                                           "--language", language])
+
+
+def _has_audio(path):
+    r = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "a", "-show_entries", "stream=index",
+                        "-of", "csv=p=0", str(path)], capture_output=True, text=True, encoding="utf-8", errors="replace")
+    return r.returncode == 0 and r.stdout.strip() != ""
+
+
+def _need_media(path, audio=False):
+    if not Path(path).is_file():
+        sys.exit(f"error: file not found: {path}")
+    if audio and not _has_audio(path):
+        sys.exit(f"error: {path} has no sound track")
+
+
+def _language(prefix, given):
+    """The language to align with: the one given, else the one transcribe detected (saved next to the .srt)."""
+    if given:
+        return given
+    meta = Path(str(prefix) + ".meta.json")
+    if meta.exists():
+        return json.loads(meta.read_text(encoding="utf-8")).get("language") or "en"
+    sys.exit("error: say the language with --language (es, en, pt...): no transcript metadata found next to it")
 
 
 def _seconds(path):
     r = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(path)],
-                       capture_output=True, text=True)
-    return float(r.stdout.strip())
+                       capture_output=True, text=True, encoding="utf-8", errors="replace")
+    try:
+        return float(r.stdout.strip())
+    except ValueError:
+        sys.exit(f"error: cannot read the length of {path}")
 
 
 def _key(w):
@@ -152,7 +198,13 @@ def cmd_words(rest):
     pieces = json.loads(Path(a.pieces).read_text(encoding="utf-8"))
     base = Path(a.pieces).parent
     out, t = [], 0.0
-    for pc in pieces:
+    for k, pc in enumerate(pieces, 1):
+        missing = [x for x in ("words", "from", "to") if x not in pc]
+        if missing or not ("length" in pc or "file" in pc):
+            sys.exit(f"error: piece {k} needs words, from, to and file (or length); missing: "
+                     f"{', '.join(missing) or 'file/length'}")
+        if not (base / pc["words"]).is_file() or ("file" in pc and not (base / pc["file"]).is_file()):
+            sys.exit(f"error: piece {k}: file not found ({pc.get('file') if 'file' in pc else pc['words']})")
         src = json.loads((base / pc["words"]).read_text(encoding="utf-8"))
         f, z = float(pc["from"]), float(pc["to"])
         for w in src:
@@ -286,9 +338,12 @@ def cmd_silences(rest):
     p.add_argument("--json", action="store_true")
     a = p.parse_args(rest)
     E.need("ffmpeg", "FFmpeg is required.")
+    _need_media(a.video, audio=True)
     r = subprocess.run(["ffmpeg", "-nostdin", "-hide_banner", "-i", a.video, "-vn", "-af",
                         f"highpass=f=100,silencedetect=n={a.db}dB:d={a.min}", "-f", "null", "-"],
                        capture_output=True, text=True, encoding="utf-8", errors="replace")
+    if r.returncode:
+        sys.exit(f"error: could not read {a.video}: {r.stderr.strip().splitlines()[-1] if r.stderr.strip() else ''}")
     out, start = [], None
     for line in r.stderr.splitlines():
         if m := re.search(r"silence_start: ([\d.]+)", line):
@@ -377,7 +432,7 @@ def cmd_overlaps(rest):
               "that cover the face. Mark what to check with data-check=\"name\"; otherwise every visible text and image.")
         return 0
     chrome = subprocess.run([*E.hyperframes_cmd(), "browser", "path"], capture_output=True, text=True,
-                            cwd=E.GRAPHICS).stdout.strip().splitlines()[-1:]
+                            encoding="utf-8", errors="replace", cwd=E.GRAPHICS).stdout.strip().splitlines()[-1:]
     if not chrome or not Path(chrome[0]).exists():
         sys.exit("error: HyperFrames' Chrome is missing. Run: reel.py setup --module graphics")
     return subprocess.run([E.which("node") or "node", str(E.SCRIPTS / "overlaps.mjs"), str(E.GRAPHICS), chrome[0],
@@ -491,6 +546,7 @@ def cmd_sfx(rest):
     cues = [sfx.parse_cue(l) for l in lines if l]
     if not (a.video and a.output and cues):
         p.error("give a video, -o OUTPUT and at least one --at or --cues")
+    _need_media(a.video, audio=True)
     sfx.place(a.video, a.output, cues, folders, a.level)
     print(f"{len(cues)} effects → {a.output}  (now run: reel.py level {a.output} -o <final>)")
     return 0

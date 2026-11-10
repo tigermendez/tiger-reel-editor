@@ -149,6 +149,8 @@ def cmd_transcribe(a):
         write_srt(segments, a.out + ".srt")
         words = align(wav, segments, language) if segments else []
     save_words(words, a.out + ".words.json")
+    with open(a.out + ".meta.json", "w", encoding="utf-8") as f:  # align/fix reuse the detected language
+        json.dump({"language": language, "model": a.model}, f)
     listen = moments_to_listen(heard, a.listen)
     with open(a.out + ".listen.json", "w", encoding="utf-8") as f:
         json.dump(listen, f, ensure_ascii=False, indent=1)

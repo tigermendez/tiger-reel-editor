@@ -10,6 +10,7 @@ import io
 import json
 import os
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -108,11 +109,14 @@ def machine_notes():
 # ---------------------------------------------------------------- system programs
 
 def ffmpeg_state():
-    """(found, has_libass, version line)."""
+    """(usable, has_libass, version line). Usable = present and 6.1+ (ffmpeg-skill refuses older builds)."""
     ff = E.which("ffmpeg")
     if not ff or not E.which("ffprobe"):
         return False, False, None
     ver = subprocess.run([ff, "-hide_banner", "-version"], capture_output=True, text=True, env=E.env()).stdout.splitlines()
+    m = re.match(r"ffmpeg version n?(\d+)\.(\d+)", ver[0] if ver else "")
+    if m and (int(m[1]), int(m[2])) < (6, 1):
+        return False, False, f"{ver[0]} (too old: 6.1 or newer is needed)"
     filters = subprocess.run([ff, "-hide_banner", "-filters"], capture_output=True, text=True, env=E.env()).stdout
     libass = any(line.split()[1:2] == ["subtitles"] for line in filters.splitlines() if len(line.split()) > 1)
     return True, libass, (ver[0] if ver else "ffmpeg")
@@ -174,14 +178,16 @@ def ensure_system(yes, want_node=False):
         os.environ.update(E.env())
     found, libass, ver = ffmpeg_state()
     if not found:
-        sys.exit("error: FFmpeg was installed but is not visible yet. Open a new terminal and run setup again.")
+        sys.exit("error: FFmpeg was installed but is not visible yet. Close and reopen Claude Code (or your terminal) "
+                 "and run setup again.")
     ok(ver)
     (ok if libass else bad)("FFmpeg can burn captions (libass)" if libass else
                             "this FFmpeg has no libass: burned-in captions will not work")
     ok(f"uv {subprocess.run([E.which('uv'), '--version'], capture_output=True, text=True).stdout.split()[1]}")
     if want_node:
         if not node_ok():
-            sys.exit(f"error: Node.js {NODE_MIN}+ was installed but is not visible yet. Open a new terminal and run setup again.")
+            sys.exit(f"error: Node.js {NODE_MIN}+ was installed but is not visible yet. Close and reopen Claude Code "
+                     "(or your terminal) and run setup again.")
         ok(f"Node.js {subprocess.run([E.which('node'), '--version'], capture_output=True, text=True).stdout.strip()}")
 
 
@@ -192,6 +198,7 @@ def ensure_ffmpeg_skill(source=None):
     if (d / "SKILL.md").exists() and (d / "scripts" / "cut.py").exists():
         ok(f"ffmpeg-skill {E.FFMPEG_SKILL_VERSION}")
         return
+    shutil.rmtree(d, ignore_errors=True)  # a half-finished earlier attempt is replaced, never nested into
     if source:  # a local .tgz or folder, e.g. a backup fork, when the registry is unreachable
         src = Path(source)
         if src.is_dir():
@@ -209,10 +216,13 @@ def ensure_ffmpeg_skill(source=None):
             sys.exit("error: ffmpeg-skill tarball does not match its pinned hash; refusing to install it.")
     tmp = Path(tempfile.mkdtemp(prefix="ffmpeg-skill-", dir=E.HOME))
     with tarfile.open(fileobj=io.BytesIO(data), mode="r:gz") as t:
-        for m in t.getmembers():  # no absolute paths, no "..", no links
-            if m.issym() or m.islnk() or m.name.startswith("/") or ".." in Path(m.name).parts:
+        for m in t.getmembers():  # only plain files and folders, no absolute paths, no ".."
+            if not (m.isfile() or m.isdir()) or m.name.startswith("/") or ".." in Path(m.name).parts:
                 sys.exit(f"error: unexpected entry in the ffmpeg-skill tarball: {m.name}")
-        t.extractall(tmp)
+        try:
+            t.extractall(tmp, filter="data")
+        except TypeError:  # Python < 3.12
+            t.extractall(tmp)
     d.parent.mkdir(parents=True, exist_ok=True)
     shutil.move(str(tmp / "package"), str(d))
     shutil.rmtree(tmp, ignore_errors=True)
@@ -262,18 +272,18 @@ def ensure_core_models(languages, model):
 
 
 def ensure_npm(packages):
-    """Pinned Node packages in <home>/graphics, plus the headless Chrome HyperFrames renders with."""
+    """HyperFrames and every dependency at the versions in the shipped lockfile (npm ci), plus its headless Chrome."""
     d = E.GRAPHICS
     d.mkdir(parents=True, exist_ok=True)
-    pkg = {"name": "tiger-reel-editor-graphics", "private": True, "dependencies": packages}
-    marker = d / "package.json"
-    have = json.loads(marker.read_text()) if marker.exists() else {}
-    npm = E.which("npm")
-    if have.get("dependencies") != packages or not (d / "node_modules" / "hyperframes").exists():
-        print(f"  ..  {', '.join(f'{k}@{v}' for k, v in packages.items())} (npm)")
-        marker.write_text(json.dumps(pkg, indent=2))
-        E.run([npm, "install", "--no-fund", "--no-audit", "--loglevel", "error"], cwd=d, shell=E.IS_WIN)
-    ok(f"hyperframes {packages['hyperframes']}")
+    src = E.SCRIPTS / "graphics"
+    lock = (src / "package-lock.json").read_text(encoding="utf-8")
+    have = (d / "package-lock.json").read_text(encoding="utf-8") if (d / "package-lock.json").exists() else ""
+    if have != lock or not (d / "node_modules" / "hyperframes").exists():
+        print(f"  ..  {', '.join(f'{k}@{v}' for k, v in packages.items())} and its dependencies (npm ci, locked)")
+        shutil.copy(src / "package.json", d / "package.json")
+        shutil.copy(src / "package-lock.json", d / "package-lock.json")
+        E.run([E.which("npm"), "ci", "--no-fund", "--no-audit", "--loglevel", "error"], cwd=d, shell=E.IS_WIN)
+    ok(f"hyperframes {packages['hyperframes']} (dependencies locked)")
     hf = E.hyperframes_cmd()
     E.run([*hf, "telemetry", "disable"], cwd=d, stdout=subprocess.DEVNULL, check=False)
     print("  ..  Chrome for rendering (~150 MB the first time)")

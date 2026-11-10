@@ -3,7 +3,7 @@
   face.py <model.tflite> <video> [--step 0.2] [--json face.json]
   face.py <model.tflite> <video> --texts captions.ass|captions.srt|texts.json [--band 1150-1250]
 
-Footage wider than 1080 px is measured at 1080 px wide, so the pixels match a 1080x1920 export.
+Footage is measured at 1080 px wide (scaled up or down), so the pixels match the 1080x1920 canvas of captions.
 Prints the stretches with a face: forehead to chin, the mouth, and from which height captions fit below the chin.
 --texts checks every text against the face: an .ass from `reel.py captions` (its real position), an .srt
 (uses --band as its vertical box) or a JSON list of
@@ -55,10 +55,13 @@ def iou(a, b):
 
 def detect(model, video, step, threshold):
     w, h = size(video)
-    if w > 1080:  # work at reel width: faster on 4K phone footage, and pixels match a 1080-wide export
-        w, h = 1080, round(h * 1080 / w / 2) * 2
+    # Always measure at 1080 wide (scaling 4K down and 720p up), so face boxes share the pixel space of the
+    # 1080x1920 canvas that captions (--y, .ass positions) and graphics use.
+    w, h = 1080, round(h * 1080 / w / 2) * 2
     det = vision.FaceDetector.create_from_options(vision.FaceDetectorOptions(
-        base_options=mpt.BaseOptions(model_asset_path=model), min_detection_confidence=threshold))
+        # The model as bytes: MediaPipe cannot open a path with non-ASCII characters on Windows (C:\\Users\\José).
+        base_options=mpt.BaseOptions(model_asset_buffer=open(model, "rb").read()),
+        min_detection_confidence=threshold))
     side = min(w, h)
     n = max(1, round((max(w, h) - side) / (side * 0.4)) + 1)
     offs = [round(i * (max(w, h) - side) / max(1, n - 1)) for i in range(n)]

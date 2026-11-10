@@ -44,10 +44,14 @@ def _extra_paths():
         # Homebrew's plain `ffmpeg` has no libass/drawtext (no burned-in captions); `ffmpeg-full` does, but it is keg-only.
         for prefix in ("/opt/homebrew", "/usr/local"):
             out.append(f"{prefix}/opt/ffmpeg-full/bin")
+        out += ["/opt/homebrew/bin", "/usr/local/bin"]  # Homebrew installed but its "next steps" (PATH) skipped
     if IS_WIN:
         local = os.environ.get("LOCALAPPDATA")
         if local:
             out.append(str(Path(local) / "Microsoft" / "WinGet" / "Links"))  # winget puts shims here
+        for var in ("ProgramFiles", "ProgramFiles(x86)"):
+            if os.environ.get(var):
+                out.append(str(Path(os.environ[var]) / "nodejs"))  # Node.js MSI from winget
     return [p for p in out if Path(p).is_dir()]
 
 

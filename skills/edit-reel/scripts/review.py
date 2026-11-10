@@ -5,7 +5,7 @@
 
 Checks: 1080x1920, 30 fps average, H.264 yuv420p, AAC, decodes end to end, length within the platform limit,
 loudness of the FINAL MIX at -14 LUFS (±1) and true peak at or below -1 dBTP. --sheet writes <video>.sheet.jpg,
-one frame every 2 s, to look at before delivering. Exit 0 = passes, 1 = something to fix, 2 = could not review.
+40 frames spread over the whole video, to look at before delivering. Exit 0 = passes, 1 = something to fix, 2 = could not review.
 
 Passing is not approval: captions in sync and spelled right, the face free, cuts that sound natural and the story
 itself are still the person's call. This only proves the file will not be rejected or sound quieter than the rest.
@@ -100,10 +100,12 @@ def inspect(video, platform="reels", target=-14.0, tolerance=1.0, max_peak=-1.0)
     }
 
 
-def sheet(video):
+def sheet(video, duration):
+    """40 frames spread over the whole video (one every duration/40 s), in one image to look at."""
     out = video.with_suffix(".sheet.jpg")
-    run(["ffmpeg", "-nostdin", "-v", "error", "-y", "-i", str(video), "-vf", "fps=1/2,scale=200:-1,tile=8x5",
-         "-frames:v", "1", "-update", "1", str(out)])
+    step = max(duration, 1) / 40
+    run(["ffmpeg", "-nostdin", "-v", "error", "-y", "-i", str(video), "-vf",
+         f"fps=1/{step:.3f},scale=200:-1,tile=8x5", "-frames:v", "1", "-update", "1", str(out)])
     return out
 
 
@@ -120,7 +122,8 @@ def main():
     try:
         rep = inspect(a.video.resolve(), a.platform, a.target_lufs, a.tolerance, a.max_peak)
         if a.sheet:
-            rep["sheet"] = str(sheet(a.video.resolve()))
+            dur = next((c["actual"] for c in rep["checks"] if c["name"] == "Length"), 0) or 0
+            rep["sheet"] = str(sheet(a.video.resolve(), float(dur)))
     except (ValueError, OSError) as e:
         print(json.dumps({"error": str(e)}) if a.json else f"ERROR: {e}", file=sys.stdout if a.json else sys.stderr)
         return 2
