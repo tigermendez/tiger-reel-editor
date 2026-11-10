@@ -13,6 +13,8 @@
   reel.py silences <video> [--db -38] [--min 0.3]                    where the pauses are (start end length)
   reel.py face <video> [--texts captions.srt --band 1150-1250] [--json face.json]
                                                                      where the face is; does any text cover it?
+  reel.py study <example video> -o study/<name>                      measure an example's style (hook, cuts, rhythm, text, sound)
+  reel.py font "Bebas Neue" | --list                                fonts as files in fonts/ (Google Fonts), same on every OS
   reel.py sfx <video> -o <out> --at "1.2 whoosh" [--at ...]        sound effects at exact times (--starter DIR: basic set)
   reel.py level <video> -o <out>                                     final mix to -14 LUFS, peaks safe, no distortion
   reel.py review <video> [--platform reels|tiktok|shorts] [--sheet]  final technical check (exit 0 = passes)
@@ -245,7 +247,8 @@ def cmd_captions(rest):
     g.add_argument("--y-at", action="append", default=[], metavar="START-END=Y",
                    help="a different height for a stretch, e.g. 23.5-85=1350 (screens: keep the text being read free)")
     g.add_argument("--size", type=int, default=86, help="font size in px (86)")
-    g.add_argument("--font", default="Arial", help="font family installed on this machine (Arial)")
+    g.add_argument("--font", default="Arial", help="a font file (fonts/Bangers.ttf), a family in ./fonts, or an "
+                   "installed family (Arial). Files are the same on every computer: burn with --fonts-dir")
     g.add_argument("--color", default="FFFFFF", help="text colour, hex RRGGBB (FFFFFF)")
     g.add_argument("--accent", default=None, help="colour of the word being said, hex (e.g. FFD400); off by default")
     g.add_argument("--outline", type=float, default=6, help="black outline in px (6)")
@@ -268,6 +271,11 @@ def cmd_captions(rest):
         end = min(nxt, c[-1]["end"] + 0.4)  # hold a little after the last word, never over the next cue
         timed.append((c, c[0]["start"], end))
     fix = (lambda s: s.upper()) if a.upper else (lambda s: s)
+    import fonts
+    ffile, fam = fonts.find(a.font)
+    if ffile:
+        a.font = fam
+        print(f"font: {fam} from {ffile} — burn with: ff caption <video> --ass {a.out} --fonts-dir {ffile.parent}")
     if a.out.lower().endswith(".ass"):
         write_ass(a, timed, fix)
     else:
@@ -423,6 +431,94 @@ def cmd_cutout(rest):
     return 0
 
 
+def cmd_study(rest):
+    p = argparse.ArgumentParser(prog="reel.py study", description=(
+        "Measure an example video so its style can be written down as a recipe: the first 3 s frame by frame (the "
+        "hook), 40 frames over the whole video, every cut and the shot rhythm, loudness, size, and — with sound and "
+        "the core module — the transcript and words per minute. Look at the images; the numbers are in stats.json."))
+    p.add_argument("video")
+    p.add_argument("-o", "--out", required=True, help="folder for the results")
+    p.add_argument("--language", default=None)
+    p.add_argument("--scene", type=float, default=0.3, help="cut sensitivity, 0–1 (0.3)")
+    a = p.parse_args(rest)
+    _need_media(a.video)
+    out = Path(a.out)
+    out.mkdir(parents=True, exist_ok=True)
+    dur = _seconds(a.video)
+    probe = json.loads(subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries",
+                                       "stream=width,height,avg_frame_rate", "-of", "json", a.video],
+                                      capture_output=True, text=True, encoding="utf-8").stdout)["streams"][0]
+    run = lambda *c: subprocess.run(["ffmpeg", "-nostdin", "-hide_banner", "-v", "error", "-y", *map(str, c)],
+                                    capture_output=True, text=True, encoding="utf-8", errors="replace")
+    run("-t", 3, "-i", a.video, "-vf", "fps=4,scale=240:-1,tile=6x2", "-frames:v", 1, out / "hook.jpg")
+    run("-i", a.video, "-vf", f"fps=1/{max(dur, 1) / 40:.3f},scale=200:-1,tile=8x5", "-frames:v", 1, out / "sheet.jpg")
+    # Every frame's scene score: big jumps are cuts; small isolated spikes are jump cuts and graphics entering.
+    r = subprocess.run(["ffmpeg", "-nostdin", "-hide_banner", "-i", a.video, "-an", "-vf",
+                        "select='gte(scene,0)',metadata=print:file=-", "-f", "null", "-"], capture_output=True,
+                       text=True, encoding="utf-8", errors="replace")
+    times = [float(x) for x in re.findall(r"pts_time:([\d.]+)", r.stdout)]
+    scores = [float(x) for x in re.findall(r"scene_score=([\d.]+)", r.stdout)]
+    cuts, changes = [], []
+    import statistics
+    for i, (t, x) in enumerate(zip(times, scores)):
+        if x > a.scene:
+            cuts.append(round(t, 2))
+        around = scores[max(0, i - 15):i] + scores[i + 1:i + 16]
+        if x > 0.03 and x > 4 * max(statistics.median(around) if around else 0, 0.004) and \
+                (not changes or t - changes[-1] > 0.2):
+            changes.append(round(t, 2))
+    (out / "cuts.txt").write_text("# big cuts\n" + "\n".join(map(str, cuts)) + "\n# all visual changes "
+                                  "(jump cuts, graphics entering)\n" + "\n".join(map(str, changes)) + "\n",
+                                  encoding="utf-8")
+    shots = [b - a_ for a_, b in zip([0.0] + cuts, cuts + [dur])]
+    stats = {"file": str(a.video), "seconds": round(dur, 2), "size": [probe.get("width"), probe.get("height")],
+             "fps": probe.get("avg_frame_rate"), "big_cuts": len(cuts),
+             "average_shot_s": round(sum(shots) / len(shots), 2) if shots else None,
+             "visual_changes": len(changes),
+             "something_new_every_s": round(dur / (len(changes) + 1), 2) if dur else None}
+    if _has_audio(a.video):
+        i, tp = _loudness(a.video)
+        stats.update({"loudness_lufs": i, "true_peak_dbtp": tp})
+        if E.venv_python("core").exists():
+            args = ["transcribe", a.video, str(out / "transcript")] + (["--language", a.language] if a.language else [])
+            E.in_venv("core", "speech.py", args)
+            words = json.loads((out / "transcript.words.json").read_text(encoding="utf-8"))
+            speech = sum(w["end"] - w["start"] for w in words)
+            stats.update({"words": len(words), "words_per_minute": round(len(words) / dur * 60) if dur else None,
+                          "first_word_at_s": words[0]["start"] if words else None,
+                          "speech_share": round(speech / dur, 2) if dur else None})
+    (out / "stats.json").write_text(json.dumps(stats, indent=1, ensure_ascii=False), encoding="utf-8")
+    print(json.dumps(stats, ensure_ascii=False))
+    print(f"→ {out}/hook.jpg (first 3 s), sheet.jpg (whole video), cuts.txt, stats.json"
+          + (", transcript.*" if (out / "transcript.txt").exists() else ""))
+    return 0
+
+
+def cmd_font(rest):
+    import fonts
+    p = argparse.ArgumentParser(prog="reel.py font", description=(
+        "Fonts as files in the project's fonts/ folder, so captions and graphics look the same on every computer. "
+        "'reel.py font Bangers' downloads it from Google Fonts (open licences, with its licence file); "
+        "'reel.py font --list' shows what is there and each file's family name (the name to use)."))
+    p.add_argument("name", nargs="?", help="Google Fonts family name, e.g. 'Bebas Neue'")
+    p.add_argument("--dir", default="fonts")
+    p.add_argument("--list", action="store_true")
+    a = p.parse_args(rest)
+    if a.list or not a.name:
+        d = Path(a.dir)
+        files = sorted(f for f in d.rglob("*") if f.suffix.lower() in fonts.FONT_SUFFIXES) if d.is_dir() else []
+        for f in files:
+            print(f"  {fonts.family_name(f):28} {f}")
+        if not files:
+            print(f"no fonts in {d}/ yet. Put font files there, or: reel.py font 'Family Name'")
+        return 0
+    got = fonts.download(a.name, a.dir)
+    fams = sorted({fonts.family_name(f) for f in got})
+    print(f"{len(got)} file(s) in {got[0].parent}: family {', '.join(fams)}")
+    print(f"captions: --font '{got[0]}'   graphics: @font-face {{ src: url('{got[0].as_posix()}') }}")
+    return 0
+
+
 def cmd_overlaps(rest):
     if not (E.GRAPHICS / "node_modules" / "hyperframes").exists():
         sys.exit("error: the 'graphics' module is not installed. Run: reel.py setup --module graphics")
@@ -555,7 +651,7 @@ def cmd_sfx(rest):
 COMMANDS = {"setup": cmd_setup, "doctor": cmd_doctor, "new": cmd_new, "transcribe": cmd_transcribe,
             "align": cmd_align, "fix": cmd_fix, "words": cmd_words, "captions": cmd_captions, "silences": cmd_silences, "face": cmd_face,
             "review": cmd_review, "voice": cmd_voice, "ff": cmd_ff,
-            "hf": cmd_hf, "overlaps": cmd_overlaps, "cutout": cmd_cutout, "level": cmd_level, "sfx": cmd_sfx}
+            "hf": cmd_hf, "overlaps": cmd_overlaps, "cutout": cmd_cutout, "font": cmd_font, "study": cmd_study, "level": cmd_level, "sfx": cmd_sfx}
 
 
 def main():

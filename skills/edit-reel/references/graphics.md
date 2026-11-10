@@ -40,6 +40,11 @@ Place the text so it crosses the top of the head (use `reel.py face` for where t
 of the letters and they read as being behind it. Use it for the one word that matters, not as a habit. Hair,
 hands and fast movement can leave rough edges: look at the frames.
 
+## Fonts
+Use font files, not installed fonts, so the render is the same on every computer: copy the file from the project's
+`fonts/` (get one with `reel.py font "<Family>"`) into the graphics folder and declare it:
+`@font-face { font-family: "Bebas Neue"; src: url("BebasNeue-Regular.ttf"); }`.
+
 ## Layout rules that work for vertical video
 
 - The top ~240 px belong to the app's own interface; the bottom ~20 % and the right ~12 % too (`review.md`).

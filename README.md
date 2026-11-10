@@ -90,13 +90,31 @@ your face before rendering. Music and sample libraries are not included (most fr
 redistribution); you get a starter set of effects made from scratch, and
 [where to get better ones](skills/edit-reel/references/sounds.md).
 
+## It learns your style
+
+Show it an example — a reel you like, screenshots, a template, or just a description — and Claude measures it
+(hook, rhythm, where the text goes, fonts, colours, sound) and writes a **recipe** in your project's `recipes/`
+folder. From then on, "do it like the *list* recipe" is enough. Recipes are starting points: mix them, bend them,
+or ask for something no recipe has — Claude builds it anyway.
+
+Everything it learns lives in plain files in your project, so you own it and can edit it:
+
+| File | What it holds |
+|---|---|
+| `style.md` | Your rules in your words. Correct something twice and Claude offers to add it here. |
+| `recipes/*.md` | Looks learned from examples: what defines each one, what can change, how to build it. |
+| `fonts/` | Your fonts as files (bring them, or Claude gets them from Google Fonts), so they look the same anywhere. |
+| `sounds/` + `sounds.txt` | Your sound effects and what each one is for. |
+
+Made a recipe that would help everyone? Open a pull request adding it to `skills/edit-reel/templates/`.
+
 ## Tools
 
 All through one entry point: `python3 skills/edit-reel/scripts/reel.py <command>` (`python` on Windows).
 
 ```
-setup · doctor · new · transcribe · fix · align · words · captions · silences · face · sfx · level · review · voice
-overlaps · cutout
+setup · doctor · new · study · transcribe · fix · align · words · captions · font · silences · face · sfx · level
+review · voice · overlaps · cutout
 ff <ffmpeg-skill tool> · hf <HyperFrames command>
 ```
 

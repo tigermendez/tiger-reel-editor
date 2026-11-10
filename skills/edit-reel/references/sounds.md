@@ -40,8 +40,7 @@ For more, search Pixabay by type and pick short ones (under 1 s for accents):
 [ding](https://pixabay.com/sound-effects/search/ding/) ·
 [riser](https://pixabay.com/sound-effects/search/riser/) ·
 [typing](https://pixabay.com/sound-effects/search/typing/).
-The **YouTube Audio Library** is another free source (some tracks ask for attribution). Read each site's current
-licence before using; never re-upload the files themselves anywhere.
+The **YouTube Audio Library** is another free source.
 
 ## Placing effects
 `reel.py sfx <video> -o <out> --at "1.20 whoosh" --at "5.10 pop -4"`, or a cues file with one `time sound [dB]` per

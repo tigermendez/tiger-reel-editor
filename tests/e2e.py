@@ -202,6 +202,25 @@ def main():
         return float(m[1]) if m else -120.0
     quiet, hit = peak(0, 0.8), peak(0.98, 0.25)
     check(quiet < -60 and hit > -30, f"effect placed at 1.0 s (before: {quiet} dB, at the cue: {hit} dB)")
+    # 7b. Study an example: frames, rhythm and transcript.
+    reel("study", d / "raw.mp4", "-o", d / "study", "--language", "en")
+    st = json.loads((d / "study" / "stats.json").read_text(encoding="utf-8"))
+    check((d / "study" / "hook.jpg").exists() and (d / "study" / "sheet.jpg").exists(), "study writes the frames")
+    check(st.get("words", 0) >= 12 and st.get("words_per_minute"), f"study measures speech ({st.get('words_per_minute')} wpm)")
+
+    # 7c. Fonts as files: download one (needs internet; skipped if GitHub is unreachable) and burn captions with it.
+    r = reel("font", "Bebas Neue", "--dir", d / "fonts", ok=(0, 1))
+    if r.returncode == 0:
+        ttf = next((d / "fonts").rglob("*.ttf"))
+        reel("captions", d / "fixed.words.json", d / "font.ass", "--y", "1200", "--font", ttf)
+        check("Style: Reel,Bebas Neue," in (d / "font.ass").read_text(encoding="utf-8"),
+              "captions use the family name read from the font file")
+        reel("ff", "caption", d / "raw.mp4", "--ass", d / "font.ass", "--fonts-dir", ttf.parent, "-o",
+             d / "font.mp4", "--overwrite")
+        check((d / "font.mp4").exists(), "captions burn with a font file (no installed font needed)")
+    else:
+        print("  --  font download skipped (no access to GitHub)")
+
     # 8. Clear errors instead of wrong answers.
     sh("ffmpeg", "-nostdin", "-v", "error", "-y", "-f", "lavfi", "-i", "color=c=black:s=720x1280:r=30:d=2",
        "-c:v", "libx264", "-pix_fmt", "yuv420p", d / "mute.mp4")
