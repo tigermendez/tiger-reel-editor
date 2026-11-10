@@ -156,11 +156,14 @@ def main():
     for c in rep["checks"]:
         check(c["pass"], f"review: {c['name']} = {c['actual']}")
     check(Path(rep["sheet"]).exists(), "contact sheet written")
-    # The caption is drawn centred where asked: bright pixels around x=540, y=1200..1300 while a word is on screen.
-    px = subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-ss", "1.0", "-i", str(d / "reel_v1.mp4"), "-frames:v",
-                         "1", "-vf", "crop=1080:110:0:1200,format=gray,scale=108:11", "-f", "rawvideo", "-"],
+    # The caption is drawn centred where asked: light pixels around x=540, y=1200..1310, in the middle of a cue.
+    first = next(l for l in ass.splitlines() if l.startswith("Dialogue:")).split(",")
+    t0 = sum(float(x) * m for x, m in zip(first[1].split(":"), (3600, 60, 1)))
+    t1 = sum(float(x) * m for x, m in zip(first[2].split(":"), (3600, 60, 1)))
+    px = subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-ss", f"{(t0 + t1) / 2:.2f}", "-i", str(d / "reel_v1.mp4"),
+                         "-frames:v", "1", "-vf", "crop=1080:110:0:1200,format=gray,scale=108:11", "-f", "rawvideo", "-"],
                         env=E.env(), capture_output=True, check=True).stdout
-    cols = [x for x in range(108) if any(px[y * 108 + x] > 200 for y in range(11) if y * 108 + x < len(px))]
+    cols = [x for x in range(108) if any(px[y * 108 + x] > 120 for y in range(11) if y * 108 + x < len(px))]
     centre = (cols[0] + cols[-1]) / 2 if cols else -1
     check(cols and abs(centre - 54) <= 6, f"caption centred at the asked height (centre column {centre} of 108)")
     print(f"\nEND TO END OK  ({d})")
