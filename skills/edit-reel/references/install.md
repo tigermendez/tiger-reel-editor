@@ -8,7 +8,7 @@ them with `brew uninstall ffmpeg-full uv` or `winget uninstall Gyan.FFmpeg astra
 
 | Module | What | Download |
 |---|---|---|
-| core | ffmpeg-skill 3.2.3 (pinned, hash-checked), Whisper large-v3-turbo, WhisperX word timings (~360 MB per language), MediaPipe face model | ~3.5 GB |
+| core | ffmpeg-skill 3.3.0 (pinned, hash-checked), Whisper large-v3-turbo, WhisperX word timings (~360 MB per language), MediaPipe face model | ~3.5 GB |
 | voice | DeepFilterNet: removes noise and echo | ~1 GB |
 | graphics | HyperFrames 0.9.27 (pinned) + its headless Chrome; Node.js 18+ (Homebrew `node` / winget `OpenJS.NodeJS.LTS`) | ~0.6 GB |
 

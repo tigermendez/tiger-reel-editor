@@ -16,9 +16,9 @@ ENVS = HOME / "envs"
 MODELS = HOME / "models"
 
 # The "hands": kajisho5/ffmpeg-skill, pinned. The tarball is checked against npm's published hash.
-FFMPEG_SKILL_VERSION = "3.2.3"
+FFMPEG_SKILL_VERSION = "3.3.0"
 FFMPEG_SKILL_TARBALL = f"https://registry.npmjs.org/ffmpeg-skill/-/ffmpeg-skill-{FFMPEG_SKILL_VERSION}.tgz"
-FFMPEG_SKILL_INTEGRITY = "sha512-HlkcmQnSxCIHyHTiLO/1sDux96Ndi1GXdzQGA5fUR++PdLSu1pr8g/b/TQpmHeBOg/eSTeskmHxYhelbSt1TsQ=="
+FFMPEG_SKILL_INTEGRITY = "sha512-raJcX4UiL+f7nofU7CJ1aMjC9d90Avj9fS5plCS5D5RGHS+iC7UFMh9Kq5VMhwzizb2wEMI6ezjU1SoZOcwCfQ=="
 FFMPEG_SKILL_DIR = HOME / "ffmpeg-skill" / FFMPEG_SKILL_VERSION
 
 # Default speech model: Whisper large-v3-turbo converted for faster-whisper (~1.6 GB).

@@ -4,7 +4,7 @@ This repository contains no third-party code. At install time, `reel.py setup` d
 
 | What | Licence | How it is used |
 |---|---|---|
-| [ffmpeg-skill](https://github.com/kajisho5/ffmpeg-skill) 3.2.3 by kajisho5 | MIT | Pinned npm tarball, checked against its published sha512; all cutting, burning, loudness and export |
+| [ffmpeg-skill](https://github.com/kajisho5/ffmpeg-skill) 3.3.0 by kajisho5 | MIT | Pinned npm tarball, checked against its published sha512; all cutting, burning, loudness and export |
 | [FFmpeg](https://ffmpeg.org) | LGPL/GPL (build dependent) | Installed with Homebrew (`ffmpeg-full`) or winget (`Gyan.FFmpeg`) |
 | [faster-whisper](https://github.com/SYSTRAN/faster-whisper) + Whisper large-v3-turbo | MIT | Speech to text |
 | [WhisperX](https://github.com/m-bain/whisperX) | BSD-2-Clause | Word timings (wav2vec2 alignment models from torchaudio/Hugging Face, each under its own licence) |
